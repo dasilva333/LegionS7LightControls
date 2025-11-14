@@ -2,6 +2,11 @@
 #include <string>
 #include <cwchar>
 #include <cstdio>
+#include <cstdlib>
+#include <iomanip>
+#include <sstream>
+#include <ctime>
+#include <cstdint>
 #include <dbghelp.h>
 #include "json.hpp" // Make sure you copy json.hpp into this folder
 
@@ -10,6 +15,7 @@
 using json = nlohmann::json;
 
 // The CORRECT signature for the vftable method at index [3]
+using InitProfileFunc = void (__cdecl*)(long long hw, unsigned int* detail, void* scratch, char* ctx);
 using VftableDispatcherFunc = void(__fastcall*)(
     void* thisPtr,       // RCX
     void* outResult,     // RDX
@@ -20,6 +26,7 @@ using VftableDispatcherFunc = void(__fastcall*)(
 namespace {
 
 FILE* g_log = nullptr;
+bool g_randSeeded = false;
 
 void EnsureLogOpen()
 {
@@ -73,10 +80,10 @@ LONG WriteCrashDump(EXCEPTION_POINTERS* info)
     return EXCEPTION_EXECUTE_HANDLER;
 }
 
-bool InvokeDispatcherSafe(VftableDispatcherFunc dispatcher, void* controller, json* outJson, json* inCommand, json* inPayload)
+bool InvokeDispatcherSafe(VftableDispatcherFunc dispatcher, void* controller, json* outJson, json* inCommand, json* inPayload, const char* ctx)
 {
     __try {
-        dispatcher(controller, outJson, inCommand, inPayload, nullptr);
+        dispatcher(controller, outJson, inCommand, inPayload, const_cast<char*>(ctx));
         return true;
     }
     __except(WriteCrashDump(GetExceptionInformation())) {
@@ -113,6 +120,16 @@ extern "C" __declspec(dllexport) bool SetProfileJson(const wchar_t* profileJson)
     void* pControllerObject = pGetInstance();
     if (pControllerObject == NULL) { Log(L"get_instance returned null"); return false; }
 
+    uintptr_t base = reinterpret_cast<uintptr_t>(hModule);
+    void* hw = reinterpret_cast<void*>(base + 0x7E840);
+    auto pInitProfile = reinterpret_cast<InitProfileFunc>(base + 0x14630);
+    if (!pInitProfile) { Log(L"init_profile_detail missing"); return false; }
+
+    unsigned int detail_buffer[12] = {0};
+    long long scratch_buffer[7] = {0};
+    pInitProfile(reinterpret_cast<long long>(hw), detail_buffer, scratch_buffer, nullptr);
+    Log(L"init_profile_detail invoked");
+
     void** pVftable = *(void***)pControllerObject;
     VftableDispatcherFunc pDispatcher = (VftableDispatcherFunc)pVftable[3];
     if (!pDispatcher) { Log(L"dispatcher slot3 null"); return false; }
@@ -134,10 +151,59 @@ extern "C" __declspec(dllexport) bool SetProfileJson(const wchar_t* profileJson)
         // 2. Prepare the 'inPayload' JSON object
         std::string payload_str = WStringToUtf8(profileJson);
         Log(L"Parsing payload JSON (%zu bytes)", payload_str.size());
-        inJsonPayload = json::parse(payload_str);
+
+        auto makeCancelEvent = [&](const std::string& cmd) {
+            std::ostringstream oss;
+            if (!g_randSeeded) {
+                std::srand(static_cast<unsigned>(std::time(nullptr)));
+                g_randSeeded = true;
+            }
+            oss << "Gaming.AdvancedLighting-" << cmd << "#" << std::hex << std::setw(32) << std::setfill('0') << std::uppercase << std::rand();
+            return oss.str();
+        };
+
+        inJsonCommand["contract"] = "Gaming.AdvancedLighting";
+        inJsonCommand["command"] = "Set-LightingProfileDetails";
+        inJsonCommand["payload"] = payload_str;
+        inJsonCommand["targetAddin"] = nullptr;
+        inJsonCommand["cancelEvent"] = makeCancelEvent("Set-LightingProfileDetails");
+        inJsonCommand["clientId"] = "Consumer";
+        inJsonCommand["callerPid"] = static_cast<int>(GetCurrentProcessId());
+        inJsonPayload = payload_str;
+        Log(L"Command JSON prepared (contract + payload string)");
         
         Log(L"Dispatching command...");
-        if (!InvokeDispatcherSafe(pDispatcher, pControllerObject, &outJson, &inJsonCommand, &inJsonPayload)) {
+
+        auto buildCommand = [&](const std::string& cmdName, const std::string& payloadValue) {
+            json cmdJson;
+            cmdJson["contract"] = "Gaming.AdvancedLighting";
+            cmdJson["command"] = cmdName;
+            cmdJson["payload"] = payloadValue;
+            cmdJson["targetAddin"] = nullptr;
+            cmdJson["cancelEvent"] = makeCancelEvent(cmdName);
+            cmdJson["clientId"] = "Consumer";
+            cmdJson["callerPid"] = static_cast<int>(GetCurrentProcessId());
+            return cmdJson;
+        };
+
+        auto sendCommand = [&](const json& cmdJson, const std::string& payloadValue) {
+            json payloadJson = payloadValue;
+            json resultJson;
+            return InvokeDispatcherSafe(pDispatcher, pControllerObject, &resultJson, const_cast<json*>(&cmdJson), &payloadJson, payloadValue.c_str());
+        };
+
+        json detailsCmd = buildCommand("Set-LightingProfileDetails", payload_str);
+        if (!sendCommand(detailsCmd, payload_str)) {
+            return false;
+        }
+        Log(L"Set-LightingProfileDetails succeeded; now toggling Set-ProfileEditState");
+
+        json parsedPayload = json::parse(payload_str);
+        int profileId = parsedPayload.value("profileId", 0);
+        std::string editPayload = std::string("{\"layers\":[],\"profileId\":") + std::to_string(profileId) + "}";
+        json editCmd = buildCommand("Set-ProfileEditState", editPayload);
+        if (!sendCommand(editCmd, editPayload)) {
+            Log(L"Set-ProfileEditState failed");
             return false;
         }
         Log(L"Dispatcher returned. Result keys: %zu", outJson.size());

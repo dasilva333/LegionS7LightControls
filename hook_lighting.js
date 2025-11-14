@@ -1,98 +1,131 @@
 'use strict';
 
 const MODULE_NAME = "Gaming.AdvancedLighting.dll";
-const VFTABLE_INDEX = 3; // The dispatcher method we found
+const VFTABLE_INDEX = 3;
+
+// --- Helper function to get the Windows temporary directory ---
+function getTempDir() {
+    const pGetTempPathW = Process.getModuleByName('kernel32.dll').getExportByName('GetTempPathW');
+    const getTempPathW = new NativeFunction(pGetTempPathW, 'uint32', ['uint32', 'pointer']);
+    const buffer = Memory.alloc(512 * 2);
+    const length = getTempPathW(512, buffer);
+    if (length === 0) return "C:\\Temp";
+    return buffer.readUtf16String(length);
+}
+
+// --- File Logging Setup ---
+const logDir = getTempDir();
+const trafficDir = `${logDir}\\traffic`;
+try {
+    const pCreateDirectoryW = Process.getModuleByName('kernel32.dll').getExportByName('CreateDirectoryW');
+    const createDirectoryW = new NativeFunction(pCreateDirectoryW, 'bool', ['pointer', 'pointer']);
+    createDirectoryW(Memory.allocUtf16String(trafficDir), NULL);
+    console.log(`[+] Log files will be saved to: ${trafficDir}`);
+} catch (e) {
+    console.error(`[!] Failed to create log directory: ${e.message}`);
+}
+
+function writeLogFile(filename, content) {
+    const fullPath = `${trafficDir}\\${filename}`;
+    try {
+        const file = new File(fullPath, "wb");
+        if (typeof content === 'string') { file.write(content); }
+        else { file.write(content); }
+        file.close();
+        console.log(`    [+] Logged to: ${filename}`);
+    } catch (e) {
+        console.error(`    [!] Failed to write to ${filename}: ${e.message}`);
+    }
+}
+
+// Helper to read the proprietary std::string-like object
+function readVendorString(pointer) {
+    try {
+        if (!pointer || pointer.isNull()) return { str: "(null pointer)", ptr: null, len: 0 };
+        const length = pointer.add(16).readU64().toNumber();
+        if (length === 0) return { str: "", ptr: null, len: 0 };
+        
+        let dataPtr;
+        if (length > 15) { dataPtr = pointer.readPointer(); }
+        else { dataPtr = pointer; }
+        
+        // Final safety check for invalid pointers like -1
+        if (!dataPtr || dataPtr.isNull() || dataPtr.equals(ptr(-1))) {
+            return { str: "(invalid data pointer)", ptr: dataPtr, len: length };
+        }
+        
+        const str = dataPtr.readAnsiString(length);
+        return { str: str, ptr: dataPtr, len: length };
+    } catch (e) {
+        return { str: `(error: ${e.message})`, ptr: pointer, len: -1 };
+    }
+}
+
 
 function main() {
-    const module = Process.findModuleByName(MODULE_NAME);
+    const module = Process.getModuleByName(MODULE_NAME);
     if (!module) {
-        console.log(`[!] ${MODULE_NAME} not found. Waiting...`);
         setTimeout(main, 1000);
         return;
     }
 
-    console.log(`[+] ${MODULE_NAME} found at base: ${module.base}`);
-
-    // We need to find get_instance to get the object and its vftable
     const getInstance = module.getExportByName('get_instance');
-    if (!getInstance) {
-        console.error("[!] Could not find export: get_instance");
-        return;
-    }
-    console.log(`[+] Found get_instance at: ${getInstance}`);
-
-    // Create a native function we can call from JavaScript
     const getInstanceFunc = new NativeFunction(getInstance, 'pointer', []);
-    
-    // Call get_instance() to get the controller object pointer
     const pControllerObject = getInstanceFunc();
-    console.log(`[+] Controller object instance is at: ${pControllerObject}`);
-
-    // The first pointer in a C++ object is its vftable
     const pVftable = pControllerObject.readPointer();
-    console.log(`[+] Vftable is at: ${pVftable}`);
-
-    // Get the address of the target method from the vftable
     const pTargetMethod = pVftable.add(VFTABLE_INDEX * Process.pointerSize).readPointer();
-    console.log(`[+] Vftable[${VFTABLE_INDEX}] is at: ${pTargetMethod}. Hooking now...`);
+    
+    console.log(`[+] Hooking dispatcher at: ${pTargetMethod}. Waiting for traffic...`);
+    console.log("Go to the Lenovo Vantage UI and change a lighting setting.");
 
     Interceptor.attach(pTargetMethod, {
         onEnter: function(args) {
-            console.log("\n=======================================================");
-            console.log(`[>>] Vftable[${VFTABLE_INDEX}] (FUN_18004e570) CALLED`);
-            console.log("=======================================================");
-
-            // According to Ghidra's __fastcall analysis:
-            // RCX = thisPtr, RDX = outJson, R8 = inCommand, R9 = inPayload
+            const timestamp = Date.now();
+            this.timestamp = timestamp;
             this.pOutJson = args[1];
-            this.pInCommand = args[2];
-            this.pInPayload = args[3];
 
-            console.log("  [->] Inbound Command Object Pointer:", this.pInCommand);
-            try {
-                // The object is a std::string. If length <= 15, it's inline.
-                // Otherwise, the first 8 bytes are a pointer to the string data.
-                let commandStr;
-                const commandLen = this.pInCommand.add(16).readU64();
-                if (commandLen.valueOf() > 15) {
-                    commandStr = this.pInCommand.readPointer().readAnsiString();
-                } else {
-                    commandStr = this.pInCommand.readAnsiString();
-                }
-                console.log("    [+] Command JSON:", commandStr);
-            } catch (e) { console.log("    [!] Failed to read command string:", e.message); }
+            console.log(`\n--- Intercepted Call [${timestamp}] ---`);
             
-            console.log("\n  [->] Inbound Payload Object Pointer:", this.pInPayload);
-            try {
-                let payloadStr;
-                const payloadLen = this.pInPayload.add(16).readU64();
-                if (payloadLen.valueOf() > 15) {
-                    payloadStr = this.pInPayload.readPointer().readAnsiString();
-                } else {
-                    payloadStr = this.pInPayload.readAnsiString();
+            const pInCommand = args[2];
+            const pInPayload = args[3];
+
+            // --- Process Inbound Command ---
+            const commandInfo = readVendorString(pInCommand);
+            const commandManifest = { timestamp, direction: "inbound", type: "command", object_pointer: pInCommand.toString(), string_content: commandInfo.str };
+            writeLogFile(`inbound_command_${timestamp}.json`, JSON.stringify(commandManifest, null, 2));
+            if (commandInfo.ptr && !commandInfo.ptr.isNull() && !commandInfo.ptr.equals(ptr(-1)) && commandInfo.len > 0) {
+                writeLogFile(`inbound_command_${timestamp}.binary`, commandInfo.ptr.readByteArray(commandInfo.len));
+            }
+            
+            // --- Process Inbound Payload ---
+            const payloadInfo = readVendorString(pInPayload);
+            const payloadManifest = { timestamp, direction: "inbound", type: "payload", object_pointer: pInPayload.toString(), string_content: payloadInfo.str };
+            writeLogFile(`inbound_payload_${timestamp}.json`, JSON.stringify(payloadManifest, null, 2));
+            
+            // --- THIS IS THE FINAL FIX ---
+            // Add a multi-layer safety check to prevent the crash
+            if (payloadInfo.ptr && !payloadInfo.ptr.isNull() && !payloadInfo.ptr.equals(ptr(-1)) && payloadInfo.len > 0) {
+                try {
+                    writeLogFile(`inbound_payload_${timestamp}.binary`, payloadInfo.ptr.readByteArray(payloadInfo.len));
+                } catch (e) {
+                    console.error(`    [!] CRASH AVERTED: Failed to read payload binary data. Error: ${e.message}`);
                 }
-                console.log("    [+] Payload JSON:", payloadStr);
-            } catch (e) { console.log("    [!] Failed to read payload string:", e.message); }
+            }
         },
         onLeave: function(retval) {
-            console.log("\n  [<-] Vftable method is returning.");
-            console.log("  [<-] Outbound Result Object Pointer:", this.pOutJson);
-            try {
-                let resultStr;
-                const resultLen = this.pOutJson.add(16).readU64();
-                if (resultLen.valueOf() > 15) {
-                    resultStr = this.pOutJson.readPointer().readAnsiString();
-                } else {
-                    resultStr = this.pOutJson.readAnsiString();
-                }
-                console.log("    [+] Result JSON:", resultStr);
-            } catch (e) { console.log("    [!] Failed to read result string:", e.message); }
-            console.log("=======================================================\n");
+            const timestamp = this.timestamp;
+            const pOutJson = this.pOutJson;
+
+            console.log(`--- Call Return [${timestamp}] ---`);
+
+            const resultInfo = readVendorString(pOutJson);
+            const resultManifest = { timestamp, direction: "outbound", type: "result", object_pointer: pOutJson.toString(), string_content: resultInfo.str };
+            writeLogFile(`outbound_result_${timestamp}.json`, JSON.stringify(resultManifest, null, 2));
+            if (resultInfo.ptr && !resultInfo.ptr.isNull() && !resultInfo.ptr.equals(ptr(-1)) && resultInfo.len > 0) {
+                writeLogFile(`outbound_result_${timestamp}.binary`, resultInfo.ptr.readByteArray(resultInfo.len));
+            }
         }
     });
-
-    console.log("\n[+] Hook installed successfully. Waiting for calls...");
-    console.log("Go to the Lenovo Vantage UI and change a lighting setting.");
 }
 
-main();
+setTimeout(main, 500);
