@@ -1,0 +1,14 @@
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetDetailsTest\bin\Debug\net10.0\SetDetailsTest.exe
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetDetailsTest\bin\Debug\net10.0\SetDetailsTest.deps.json
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetDetailsTest\bin\Debug\net10.0\SetDetailsTest.runtimeconfig.json
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetDetailsTest\bin\Debug\net10.0\SetDetailsTest.dll
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetDetailsTest\bin\Debug\net10.0\SetDetailsTest.pdb
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetDetailsTest\obj\Debug\net10.0\SetDetailsTest.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetDetailsTest\obj\Debug\net10.0\SetDetailsTest.AssemblyInfoInputs.cache
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetDetailsTest\obj\Debug\net10.0\SetDetailsTest.AssemblyInfo.cs
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetDetailsTest\obj\Debug\net10.0\SetDetailsTest.csproj.CoreCompileInputs.cache
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetDetailsTest\obj\Debug\net10.0\SetDetailsTest.dll
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetDetailsTest\obj\Debug\net10.0\refint\SetDetailsTest.dll
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetDetailsTest\obj\Debug\net10.0\SetDetailsTest.pdb
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetDetailsTest\obj\Debug\net10.0\SetDetailsTest.genruntimeconfig.cache
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetDetailsTest\obj\Debug\net10.0\ref\SetDetailsTest.dll

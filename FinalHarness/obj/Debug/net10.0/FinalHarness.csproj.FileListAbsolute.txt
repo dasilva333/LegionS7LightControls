@@ -1,0 +1,14 @@
+C:\Users\h4rdc\keyboard-led-project\FinalHarness\bin\Debug\net10.0\FinalHarness.exe
+C:\Users\h4rdc\keyboard-led-project\FinalHarness\bin\Debug\net10.0\FinalHarness.deps.json
+C:\Users\h4rdc\keyboard-led-project\FinalHarness\bin\Debug\net10.0\FinalHarness.runtimeconfig.json
+C:\Users\h4rdc\keyboard-led-project\FinalHarness\bin\Debug\net10.0\FinalHarness.dll
+C:\Users\h4rdc\keyboard-led-project\FinalHarness\bin\Debug\net10.0\FinalHarness.pdb
+C:\Users\h4rdc\keyboard-led-project\FinalHarness\obj\Debug\net10.0\FinalHarness.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\h4rdc\keyboard-led-project\FinalHarness\obj\Debug\net10.0\FinalHarness.AssemblyInfoInputs.cache
+C:\Users\h4rdc\keyboard-led-project\FinalHarness\obj\Debug\net10.0\FinalHarness.AssemblyInfo.cs
+C:\Users\h4rdc\keyboard-led-project\FinalHarness\obj\Debug\net10.0\FinalHarness.csproj.CoreCompileInputs.cache
+C:\Users\h4rdc\keyboard-led-project\FinalHarness\obj\Debug\net10.0\FinalHarness.dll
+C:\Users\h4rdc\keyboard-led-project\FinalHarness\obj\Debug\net10.0\refint\FinalHarness.dll
+C:\Users\h4rdc\keyboard-led-project\FinalHarness\obj\Debug\net10.0\FinalHarness.pdb
+C:\Users\h4rdc\keyboard-led-project\FinalHarness\obj\Debug\net10.0\FinalHarness.genruntimeconfig.cache
+C:\Users\h4rdc\keyboard-led-project\FinalHarness\obj\Debug\net10.0\ref\FinalHarness.dll

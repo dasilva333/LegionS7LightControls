@@ -1,0 +1,14 @@
+C:\Users\h4rdc\keyboard-led-project\FinalHarness_cli\bin\Debug\net10.0\FinalHarness_cli.exe
+C:\Users\h4rdc\keyboard-led-project\FinalHarness_cli\bin\Debug\net10.0\FinalHarness_cli.deps.json
+C:\Users\h4rdc\keyboard-led-project\FinalHarness_cli\bin\Debug\net10.0\FinalHarness_cli.runtimeconfig.json
+C:\Users\h4rdc\keyboard-led-project\FinalHarness_cli\bin\Debug\net10.0\FinalHarness_cli.dll
+C:\Users\h4rdc\keyboard-led-project\FinalHarness_cli\bin\Debug\net10.0\FinalHarness_cli.pdb
+C:\Users\h4rdc\keyboard-led-project\FinalHarness_cli\obj\Debug\net10.0\FinalHarness_cli.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\h4rdc\keyboard-led-project\FinalHarness_cli\obj\Debug\net10.0\FinalHarness_cli.AssemblyInfoInputs.cache
+C:\Users\h4rdc\keyboard-led-project\FinalHarness_cli\obj\Debug\net10.0\FinalHarness_cli.AssemblyInfo.cs
+C:\Users\h4rdc\keyboard-led-project\FinalHarness_cli\obj\Debug\net10.0\FinalHarness_cli.csproj.CoreCompileInputs.cache
+C:\Users\h4rdc\keyboard-led-project\FinalHarness_cli\obj\Debug\net10.0\FinalHarness_cli.dll
+C:\Users\h4rdc\keyboard-led-project\FinalHarness_cli\obj\Debug\net10.0\refint\FinalHarness_cli.dll
+C:\Users\h4rdc\keyboard-led-project\FinalHarness_cli\obj\Debug\net10.0\FinalHarness_cli.pdb
+C:\Users\h4rdc\keyboard-led-project\FinalHarness_cli\obj\Debug\net10.0\FinalHarness_cli.genruntimeconfig.cache
+C:\Users\h4rdc\keyboard-led-project\FinalHarness_cli\obj\Debug\net10.0\ref\FinalHarness_cli.dll

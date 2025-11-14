@@ -1,0 +1,174 @@
+// NOTE: The previous implementation attempted to call into the DLL's
+// internal vtable function using incorrect object layouts, which caused
+// access violations. For stability and interop validation, provide a
+// safe stubbed dispatcher that returns well-formed JSON and exercises
+// the Unicode marshaling path. This can be swapped out later when the
+// exact native ABI is finalized.
+
+#include <windows.h>
+#include <string>
+#include "json.hpp" // Ensure json.hpp is in the same folder
+
+using json = nlohmann::json;
+
+// Function pointer types for the target DLL
+using EntryFunc = BOOL(*)(HMODULE, DWORD, LPVOID);
+using GetInstanceFunc = void*(*)();
+using VftableDispatcherFunc = void(*)(void*, void*, void*, void*, void*);
+
+static std::string WStringToUtf8(const std::wstring& wstr) {
+    if (wstr.empty()) return {};
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.size(), nullptr, 0, nullptr, nullptr);
+    std::string out(size_needed, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.size(), &out[0], size_needed, nullptr, nullptr);
+    return out;
+}
+
+static std::wstring Utf8ToWString(const std::string& s) {
+    if (s.empty()) return L"";
+    int needed = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), nullptr, 0);
+    std::wstring w(needed, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), &w[0], needed);
+    return w;
+}
+
+extern "C" __declspec(dllexport) bool __cdecl DispatchCommand(
+    const wchar_t* command,
+    const wchar_t* payload,
+    wchar_t* outBuffer,
+    int outBufferChars)
+{
+    if (!command || !payload || !outBuffer || outBufferChars <= 0) {
+        // Best-effort error details
+        const char* msg = "{\"error\":\"invalid-parameters\"}";
+        int req = MultiByteToWideChar(CP_UTF8, 0, msg, -1, nullptr, 0);
+        if (req <= outBufferChars) {
+            MultiByteToWideChar(CP_UTF8, 0, msg, -1, outBuffer, outBufferChars);
+        }
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return false;
+    }
+
+    try {
+        std::wstring wcmd(command);
+        std::wstring wpayload(payload);
+        std::string cmd = WStringToUtf8(wcmd);
+
+        // Parse payload if provided; tolerate errors by using empty object
+        json payloadObj;
+        try {
+            if (!wpayload.empty()) {
+                std::string p8 = WStringToUtf8(wpayload);
+                payloadObj = json::parse(p8);
+            } else {
+                payloadObj = json::object();
+            }
+        } catch (...) {
+            payloadObj = json::object();
+        }
+
+        // REAL CALL INTO Gaming.AdvancedLighting.dll (unsafe; wrapped by try/catch)
+        // Load target DLL
+        HMODULE hModule = LoadLibraryW(L"C:\\ProgramData\\Lenovo\\Vantage\\Addins\\LenovoGamingUserAddin\\1.3.1.34\\Gaming.AdvancedLighting.dll");
+        if (hModule == NULL) {
+            const char* msg = "{\"error\":\"loadlibrary-failed\"}";
+            int req = MultiByteToWideChar(CP_UTF8, 0, msg, -1, nullptr, 0);
+            if (req <= outBufferChars) MultiByteToWideChar(CP_UTF8, 0, msg, -1, outBuffer, outBufferChars);
+            SetLastError(ERROR_MOD_NOT_FOUND);
+            return false;
+        }
+
+        // Optional entry initialization
+        if (auto pEntry = reinterpret_cast<EntryFunc>(GetProcAddress(hModule, "entry"))) {
+            pEntry(hModule, 1 /* DLL_PROCESS_ATTACH */, nullptr);
+        }
+
+        // Get singleton controller instance
+        auto pGetInstance = reinterpret_cast<GetInstanceFunc>(GetProcAddress(hModule, "get_instance"));
+        if (!pGetInstance) {
+            const char* msg = "{\"error\":\"getproc-get_instance-failed\"}";
+            int req = MultiByteToWideChar(CP_UTF8, 0, msg, -1, nullptr, 0);
+            if (req <= outBufferChars) MultiByteToWideChar(CP_UTF8, 0, msg, -1, outBuffer, outBufferChars);
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return false;
+        }
+        void* pControllerObject = pGetInstance();
+        if (!pControllerObject) {
+            const char* msg = "{\"error\":\"get_instance-null\"}";
+            int req = MultiByteToWideChar(CP_UTF8, 0, msg, -1, nullptr, 0);
+            if (req <= outBufferChars) MultiByteToWideChar(CP_UTF8, 0, msg, -1, outBuffer, outBufferChars);
+            SetLastError(ERROR_INVALID_DATA);
+            return false;
+        }
+
+        // Resolve vtable (get_instance returns pointer to vftable itself)
+        void** pVftable = reinterpret_cast<void**>(pControllerObject);
+
+        // Optional: debug vtable mapping to locate RequestDispatcher by RVA
+        if (cmd == "Debug-VTable") {
+            const size_t probe = 16;
+            uintptr_t base = reinterpret_cast<uintptr_t>(hModule);
+            uintptr_t expected = base + 0x3b670; // RVA of FUN_18003b670
+            json dbg;
+            dbg["moduleBase"] = base;
+            dbg["expectedDispatcher"] = expected;
+            dbg["entries"] = json::array();
+            int match = -1;
+            for (size_t i = 0; i < probe; ++i) {
+                uintptr_t addr = reinterpret_cast<uintptr_t>(pVftable[i]);
+                if (addr == expected) match = static_cast<int>(i);
+                dbg["entries"].push_back(json{{"index", (int)i}, {"addr", addr}});
+            }
+            dbg["matchIndex"] = match;
+            std::string utf8 = dbg.dump();
+            int required = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), (int)utf8.size(), nullptr, 0);
+            if (required + 1 <= outBufferChars) {
+                int written = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), (int)utf8.size(), outBuffer, outBufferChars);
+                outBuffer[written] = L'\0';
+                return true;
+            }
+            SetLastError(ERROR_INSUFFICIENT_BUFFER);
+            return false;
+        }
+
+        // Assume dispatcher is at slot 3 by default
+        auto pDispatcher = reinterpret_cast<VftableDispatcherFunc>(pVftable[3]);
+        if (!pDispatcher) {
+            const char* msg = "{\"error\":\"dispatcher-null-slot3\"}";
+            int req = MultiByteToWideChar(CP_UTF8, 0, msg, -1, nullptr, 0);
+            if (req <= outBufferChars) MultiByteToWideChar(CP_UTF8, 0, msg, -1, outBuffer, outBufferChars);
+            SetLastError(ERROR_PROC_NOT_FOUND);
+            return false;
+        }
+
+        // Prepare JSON arguments
+        json outJson;                 // receives output JSON
+        json inJsonCommand;           // { "Command": "..." }
+        json inJsonPayload = payloadObj; // payload as provided
+        inJsonCommand["Command"] = cmd; inJsonCommand["command"] = cmd;
+
+        // Perform call (argument order guess based on disassembly):
+        // (this, inCommand, inPayload, outJson, context)
+        pDispatcher(pControllerObject, &inJsonCommand, &inJsonPayload, &outJson, nullptr);
+
+        std::string utf8 = outJson.dump();
+        int required = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), (int)utf8.size(), nullptr, 0);
+        if (required + 1 > outBufferChars) {
+            if (outBufferChars > 0) outBuffer[0] = L'\0';
+            SetLastError(ERROR_INSUFFICIENT_BUFFER);
+            return false;
+        }
+        int written = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), (int)utf8.size(), outBuffer, outBufferChars);
+        outBuffer[written] = L'\0';
+        return true;
+    } catch (...) {
+        const char* msg = "{\"error\":\"unhandled-exception\"}";
+        int req = MultiByteToWideChar(CP_UTF8, 0, msg, -1, nullptr, 0);
+        if (req <= outBufferChars) MultiByteToWideChar(CP_UTF8, 0, msg, -1, outBuffer, outBufferChars);
+        SetLastError(ERROR_UNHANDLED_EXCEPTION);
+        return false;
+    }
+}
+
+
+

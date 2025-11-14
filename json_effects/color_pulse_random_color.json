@@ -1,0 +1,19 @@
+{
+    "layers": [
+        {
+            "animationConfig": {
+                "animationId": 4,
+                "clockwise": 0,
+                "colorList": [],
+                "colorSize": 0,
+                "colorType": 1,
+                "direction": 0,
+                "speed": 2,
+                "transition": 0
+            },
+            "keys": [],
+            "layerId": 1
+        }
+    ],
+    "profileId": 1
+}

@@ -1,0 +1,3 @@
+[submodule "external/LegionS7LightControls"]
+	path = external/LegionS7LightControls
+	url = https://github.com/dasilva333/LegionS7LightControls.git

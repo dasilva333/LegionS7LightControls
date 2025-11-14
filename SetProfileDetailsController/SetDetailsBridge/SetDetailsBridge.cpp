@@ -1,0 +1,157 @@
+#include <windows.h>
+#include <string>
+#include <cwchar>
+#include <cstdio>
+#include <dbghelp.h>
+#include "json.hpp" // Make sure you copy json.hpp into this folder
+
+#pragma comment(lib, "dbghelp.lib")
+
+using json = nlohmann::json;
+
+// The CORRECT signature for the vftable method at index [3]
+using VftableDispatcherFunc = void(__fastcall*)(
+    void* thisPtr,       // RCX
+    void* outResult,     // RDX
+    void* inCommand,     // R8
+    void* inPayload,     // R9
+    void* ctx);
+
+namespace {
+
+FILE* g_log = nullptr;
+
+void EnsureLogOpen()
+{
+    if (g_log) return;
+    wchar_t dir[512];
+    DWORD len = GetEnvironmentVariableW(L"LOCALAPPDATA", dir, 512);
+    std::wstring folder = (len && len < 512) ? std::wstring(dir) : std::wstring(L"C:\\Users\\Public\\AppData");
+    folder += L"\\ProfileBridge";
+    CreateDirectoryW(folder.c_str(), nullptr);
+    std::wstring path = folder + L"\\details_setter.log";
+    _wfopen_s(&g_log, path.c_str(), L"a, ccs=UTF-8");
+}
+
+void Log(const wchar_t* fmt, ...)
+{
+    EnsureLogOpen();
+    if (!g_log) return;
+    va_list args;
+    va_start(args, fmt);
+    vfwprintf(g_log, fmt, args);
+    fwprintf(g_log, L"\n");
+    fflush(g_log);
+    va_end(args);
+}
+
+LONG WriteCrashDump(EXCEPTION_POINTERS* info)
+{
+    DWORD code = info && info->ExceptionRecord ? info->ExceptionRecord->ExceptionCode : 0;
+    Log(L"SEH exception 0x%08lx captured", code);
+    wchar_t dir[512];
+    DWORD len = GetEnvironmentVariableW(L"LOCALAPPDATA", dir, 512);
+    std::wstring folder = (len && len < 512) ? std::wstring(dir) : std::wstring(L"C:\\Users\\Public\\AppData");
+    folder += L"\\ProfileBridge";
+    CreateDirectoryW(folder.c_str(), nullptr);
+    std::wstring dumpPath = folder + L"\\details_setter_crash.dmp";
+    HANDLE hFile = CreateFileW(dumpPath.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hFile != INVALID_HANDLE_VALUE) {
+        MINIDUMP_EXCEPTION_INFORMATION dumpInfo{};
+        dumpInfo.ThreadId = GetCurrentThreadId();
+        dumpInfo.ExceptionPointers = info;
+        dumpInfo.ClientPointers = FALSE;
+        if (MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), hFile, MiniDumpNormal, &dumpInfo, nullptr, nullptr)) {
+            Log(L"Crash dump written to %s", dumpPath.c_str());
+        } else {
+            Log(L"MiniDumpWriteDump failed (%lu)", GetLastError());
+        }
+        CloseHandle(hFile);
+    } else {
+        Log(L"CreateFile for dump failed (%lu)", GetLastError());
+    }
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+
+bool InvokeDispatcherSafe(VftableDispatcherFunc dispatcher, void* controller, json* outJson, json* inCommand, json* inPayload)
+{
+    __try {
+        dispatcher(controller, outJson, inCommand, inPayload, nullptr);
+        return true;
+    }
+    __except(WriteCrashDump(GetExceptionInformation())) {
+        return false;
+    }
+}
+
+} // namespace
+
+// Helper to safely convert C#'s wide string to a narrow UTF-8 string
+std::string WStringToUtf8(const std::wstring& wstr) {
+    if (wstr.empty()) return std::string();
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
+    std::string strTo(size_needed, 0);
+    WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
+    return strTo;
+}
+
+// The single exported function for this bridge
+extern "C" __declspec(dllexport) bool SetProfileJson(const wchar_t* profileJson)
+{
+    Log(L"--- SetProfileJson begin ---");
+    HMODULE hModule = LoadLibraryW(L"C:\\ProgramData\\Lenovo\\Vantage\\Addins\\LenovoGamingUserAddin\\1.3.1.34\\Gaming.AdvancedLighting.dll");
+    if (hModule == NULL) { Log(L"LoadLibrary failed (%lu)", GetLastError()); return false; }
+
+    using EntryFunc = BOOL (*)(HMODULE, DWORD, LPVOID);
+    EntryFunc pEntry = (EntryFunc)GetProcAddress(hModule, "entry");
+    if (pEntry) { pEntry(hModule, 1, NULL); Log(L"entry() invoked"); }
+
+    using GetInstanceFunc = void* (*)();
+    GetInstanceFunc pGetInstance = (GetInstanceFunc)GetProcAddress(hModule, "get_instance");
+    if (pGetInstance == NULL) { Log(L"get_instance missing"); return false; }
+
+    void* pControllerObject = pGetInstance();
+    if (pControllerObject == NULL) { Log(L"get_instance returned null"); return false; }
+
+    void** pVftable = *(void***)pControllerObject;
+    VftableDispatcherFunc pDispatcher = (VftableDispatcherFunc)pVftable[3];
+    if (!pDispatcher) { Log(L"dispatcher slot3 null"); return false; }
+
+    try
+    {
+        // --- THIS IS THE CRITICAL FIX ---
+        // Create REAL nlohmann::json objects on the stack.
+        json outJson;
+        json inJsonCommand;
+        json inJsonPayload;
+        // ---------------------------------
+
+        // 1. Prepare the 'inCommand' JSON object
+        inJsonCommand["Command"] = "Set-LightingProfileDetails";
+        // As the LLM noted, the dispatcher sometimes checks for a lowercase key too
+        inJsonCommand["command"] = "Set-LightingProfileDetails";
+
+        // 2. Prepare the 'inPayload' JSON object
+        std::string payload_str = WStringToUtf8(profileJson);
+        Log(L"Parsing payload JSON (%zu bytes)", payload_str.size());
+        inJsonPayload = json::parse(payload_str);
+        
+        Log(L"Dispatching command...");
+        if (!InvokeDispatcherSafe(pDispatcher, pControllerObject, &outJson, &inJsonCommand, &inJsonPayload)) {
+            return false;
+        }
+        Log(L"Dispatcher returned. Result keys: %zu", outJson.size());
+    }
+    catch (const std::exception& ex) {
+        Log(L"Exception: %S", ex.what());
+        return false;
+    }
+    catch (...) {
+        Log(L"Unknown exception");
+        return false;
+    }
+    
+    Log(L"--- SetProfileJson end (success) ---");
+    
+    return true;
+}

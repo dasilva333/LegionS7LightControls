@@ -1,0 +1,9 @@
+Manifest-Version: 1.0
+Created-By: Maven JAR Plugin 3.2.2
+Build-Jdk-Spec: 23
+Plugin-Class: com.lauriewired.GhidraMCP
+Plugin-Name: GhidraMCP
+Plugin-Version: 1.0
+Plugin-Author: LaurieWired
+Plugin-Description: A custom plugin by LaurieWired
+
