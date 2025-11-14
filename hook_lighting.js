@@ -1,131 +1,208 @@
 'use strict';
 
-const MODULE_NAME = "Gaming.AdvancedLighting.dll";
+const MODULE_NAME = 'Gaming.AdvancedLighting.dll';
 const VFTABLE_INDEX = 3;
+const STD_STRING_MAX_LEN = 1 * 1024 * 1024; // 1MB safety guard
+const CONTEXT_DUMP_SIZE = 512;
+const FALLBACK_DUMP_SIZE = 64;
+const INLINE_BUFFER_OFFSET = 0x20;
 
-// --- Helper function to get the Windows temporary directory ---
+// --- Frida API Helpers ---
 function getTempDir() {
-    const pGetTempPathW = Process.getModuleByName('kernel32.dll').getExportByName('GetTempPathW');
-    const getTempPathW = new NativeFunction(pGetTempPathW, 'uint32', ['uint32', 'pointer']);
-    const buffer = Memory.alloc(512 * 2);
-    const length = getTempPathW(512, buffer);
-    if (length === 0) return "C:\\Temp";
-    return buffer.readUtf16String(length);
+    try {
+        const kernel32 = Process.getModuleByName('kernel32.dll');
+        const getTempPathW = new NativeFunction(kernel32.getExportByName('GetTempPathW'), 'uint32', ['uint32', 'pointer']);
+        const buffer = Memory.alloc(520 * 2);
+        const len = getTempPathW(520, buffer);
+        if (len === 0) return 'C:\\Temp';
+        return buffer.readUtf16String(len);
+    } catch (e) {
+        console.error("[!] FATAL: Could not get temp directory.");
+        console.error(e); // Full error dump
+        return null;
+    }
 }
 
-// --- File Logging Setup ---
-const logDir = getTempDir();
-const trafficDir = `${logDir}\\traffic`;
-try {
-    const pCreateDirectoryW = Process.getModuleByName('kernel32.dll').getExportByName('CreateDirectoryW');
-    const createDirectoryW = new NativeFunction(pCreateDirectoryW, 'bool', ['pointer', 'pointer']);
-    createDirectoryW(Memory.allocUtf16String(trafficDir), NULL);
-    console.log(`[+] Log files will be saved to: ${trafficDir}`);
-} catch (e) {
-    console.error(`[!] Failed to create log directory: ${e.message}`);
+const trafficDir = `${getTempDir()}\\traffic`;
+
+function ensureDirectory(path) {
+    try {
+        const kernel32 = Process.getModuleByName('kernel32.dll');
+        const createDirectoryW = new NativeFunction(kernel32.getExportByName('CreateDirectoryW'), 'bool', ['pointer', 'pointer']);
+        createDirectoryW(Memory.allocUtf16String(path), NULL);
+    } catch (e) {
+        console.error(`[!] Failed to create directory ${path}.`);
+        console.error(e); // Full error dump
+    }
 }
 
-function writeLogFile(filename, content) {
+// --- File I/O ---
+function writeTextFile(filename, content) {
     const fullPath = `${trafficDir}\\${filename}`;
+    let file = null;
     try {
-        const file = new File(fullPath, "wb");
-        if (typeof content === 'string') { file.write(content); }
-        else { file.write(content); }
-        file.close();
-        console.log(`    [+] Logged to: ${filename}`);
-    } catch (e) {
-        console.error(`    [!] Failed to write to ${filename}: ${e.message}`);
-    }
-}
-
-// Helper to read the proprietary std::string-like object
-function readVendorString(pointer) {
-    try {
-        if (!pointer || pointer.isNull()) return { str: "(null pointer)", ptr: null, len: 0 };
-        const length = pointer.add(16).readU64().toNumber();
-        if (length === 0) return { str: "", ptr: null, len: 0 };
-        
-        let dataPtr;
-        if (length > 15) { dataPtr = pointer.readPointer(); }
-        else { dataPtr = pointer; }
-        
-        // Final safety check for invalid pointers like -1
-        if (!dataPtr || dataPtr.isNull() || dataPtr.equals(ptr(-1))) {
-            return { str: "(invalid data pointer)", ptr: dataPtr, len: length };
+        file = new File(fullPath, 'wb');
+        if (file) {
+            file.write(content);
+            file.close();
+        } else {
+            throw new Error("new File() returned null.");
         }
-        
-        const str = dataPtr.readAnsiString(length);
-        return { str: str, ptr: dataPtr, len: length };
     } catch (e) {
-        return { str: `(error: ${e.message})`, ptr: pointer, len: -1 };
+        console.error(`    [!] Failed to write ${filename}.`);
+        console.error(e); // Full error dump
     }
 }
 
+function writeBinaryFile(filename, data) {
+    if (!data) return;
+    const fullPath = `${trafficDir}\\${filename}`;
+    let file = null;
+    try {
+        file = new File(fullPath, 'wb');
+        if (file) {
+            file.write(data);
+            file.close();
+        } else {
+            throw new Error("new File() returned null.");
+        }
+    } catch (e) {
+        console.error(`    [!] Failed to write ${filename}.`);
+        console.error(e); // Full error dump
+    }
+}
 
+// --- Memory Parsing ---
+function pointerToString(ptr) {
+    return (ptr && !ptr.isNull()) ? ptr.toString() : '0x0';
+}
+
+// --- THE CORRECTED std::string READER ---
+function tryReadStdString(ptr) {
+    if (!ptr || ptr.isNull()) return { success: false, error: 'null object pointer' };
+    try {
+        const length = ptr.add(0x10).readU64().toNumber();
+        const capacity = ptr.add(0x18).readU64().toNumber();
+
+        if (length < 0 || length > STD_STRING_MAX_LEN) {
+            // Fallback attempt: some structs embed the chars at +0x20 with a 32-bit length.
+            try {
+                const inlinePtr = ptr.add(INLINE_BUFFER_OFFSET);
+                const inlineLen = ptr.add(INLINE_BUFFER_OFFSET + 0x10).readU32();
+                if (inlineLen > 0 && inlineLen <= STD_STRING_MAX_LEN) {
+                    const bytes = inlinePtr.readByteArray(inlineLen);
+                    const text = inlinePtr.readUtf8String(inlineLen);
+                    return { success: true, length: inlineLen, text: text || '', bytes };
+                }
+            } catch (fallbackError) {
+                console.error("[!] Fallback inline reader failed:");
+                console.error(fallbackError);
+            }
+
+            const rawBytes = ptr.readByteArray(FALLBACK_DUMP_SIZE);
+            return { success: false, error: `unrealistic length: ${length}`, bytes: rawBytes };
+        }
+
+        let dataPtr;
+        // This is the logic from the other LLM: check capacity to determine location.
+        if (capacity >= 0x10) { // 16 on x64 MSVC
+            dataPtr = ptr.readPointer(); // Heap-allocated
+        } else {
+            dataPtr = ptr; // Inline (SSO)
+        }
+
+        if (dataPtr.isNull()) return { success: true, length: 0, text: '', bytes: null };
+        
+        const bytes = (length > 0) ? dataPtr.readByteArray(length) : null;
+        const text = (length > 0) ? dataPtr.readUtf8String(length) : '';
+        
+        return { success: true, length, text: text || '', bytes };
+    } catch (e) {
+        console.error("[!] Exception in tryReadStdString:");
+        console.error(e); // Full error dump
+        try {
+            const rawBytes = ptr.readByteArray(FALLBACK_DUMP_SIZE);
+            return { success: false, error: e.message, bytes: rawBytes };
+        } catch {
+            return { success: false, error: e.message };
+        }
+    }
+}
+
+// --- Logging Functions ---
+function dumpStdString(ptr, timestamp, direction, type, prefix) {
+    const dump = tryReadStdString(ptr);
+    const record = { timestamp, direction, type, object_pointer: pointerToString(ptr) };
+    
+    if (dump.success) {
+        record.length = dump.length;
+        record.string_content = dump.text;
+        console.log(`    [+] Logged ${type} string (${dump.length} bytes)`);
+    } else {
+        record.error = dump.error;
+        console.log(`    [!] Failed to read ${type} string: ${dump.error}`);
+    }
+    
+    writeTextFile(`${prefix}_${timestamp}.json`, JSON.stringify(record, null, 2));
+    if (dump.bytes) {
+        // Write the actual string content for good strings, or the raw struct for bad ones.
+        writeBinaryFile(`${prefix}_${timestamp}.binary`, dump.bytes);
+    }
+}
+
+function dumpContext(ptr, timestamp) {
+    const record = { timestamp, direction: 'inbound', type: 'context', object_pointer: pointerToString(ptr) };
+    
+    if (ptr && !ptr.isNull()) {
+        try {
+            const data = ptr.readByteArray(CONTEXT_DUMP_SIZE);
+            record.captured_bytes = CONTEXT_DUMP_SIZE;
+            writeBinaryFile(`inbound_context_${timestamp}.binary`, data);
+            console.log(`    [+] Logged context object (${CONTEXT_DUMP_SIZE} bytes)`);
+        } catch (e) {
+            record.error = e.message;
+            console.log(`    [!] Failed to dump context object.`);
+            console.error(e);
+        }
+    } else {
+        console.log("    [+] Context object is NULL.");
+    }
+    writeTextFile(`inbound_context_${timestamp}.json`, JSON.stringify(record, null, 2));
+}
+
+// --- Main Hook ---
 function main() {
+    ensureDirectory(trafficDir);
     const module = Process.getModuleByName(MODULE_NAME);
     if (!module) {
         setTimeout(main, 1000);
         return;
     }
-
     const getInstance = module.getExportByName('get_instance');
     const getInstanceFunc = new NativeFunction(getInstance, 'pointer', []);
-    const pControllerObject = getInstanceFunc();
-    const pVftable = pControllerObject.readPointer();
-    const pTargetMethod = pVftable.add(VFTABLE_INDEX * Process.pointerSize).readPointer();
+    const controller = getInstanceFunc();
+    const vtable = controller.readPointer();
+    const dispatcher = vtable.add(VFTABLE_INDEX * Process.pointerSize).readPointer();
     
-    console.log(`[+] Hooking dispatcher at: ${pTargetMethod}. Waiting for traffic...`);
-    console.log("Go to the Lenovo Vantage UI and change a lighting setting.");
+    console.log(`[+] Hooking dispatcher at ${dispatcher}`);
+    console.log('[+] Capturing commands... open Lenovo Vantage and change a profile.');
 
-    Interceptor.attach(pTargetMethod, {
-        onEnter: function(args) {
-            const timestamp = Date.now();
-            this.timestamp = timestamp;
-            this.pOutJson = args[1];
-
-            console.log(`\n--- Intercepted Call [${timestamp}] ---`);
+    Interceptor.attach(dispatcher, {
+        onEnter(args) {
+            this.timestamp = Date.now();
+            this.outPtr = args[1];
             
-            const pInCommand = args[2];
-            const pInPayload = args[3];
-
-            // --- Process Inbound Command ---
-            const commandInfo = readVendorString(pInCommand);
-            const commandManifest = { timestamp, direction: "inbound", type: "command", object_pointer: pInCommand.toString(), string_content: commandInfo.str };
-            writeLogFile(`inbound_command_${timestamp}.json`, JSON.stringify(commandManifest, null, 2));
-            if (commandInfo.ptr && !commandInfo.ptr.isNull() && !commandInfo.ptr.equals(ptr(-1)) && commandInfo.len > 0) {
-                writeLogFile(`inbound_command_${timestamp}.binary`, commandInfo.ptr.readByteArray(commandInfo.len));
-            }
+            console.log(`\n--- Intercepted Call [${this.timestamp}] ---`);
             
-            // --- Process Inbound Payload ---
-            const payloadInfo = readVendorString(pInPayload);
-            const payloadManifest = { timestamp, direction: "inbound", type: "payload", object_pointer: pInPayload.toString(), string_content: payloadInfo.str };
-            writeLogFile(`inbound_payload_${timestamp}.json`, JSON.stringify(payloadManifest, null, 2));
-            
-            // --- THIS IS THE FINAL FIX ---
-            // Add a multi-layer safety check to prevent the crash
-            if (payloadInfo.ptr && !payloadInfo.ptr.isNull() && !payloadInfo.ptr.equals(ptr(-1)) && payloadInfo.len > 0) {
-                try {
-                    writeLogFile(`inbound_payload_${timestamp}.binary`, payloadInfo.ptr.readByteArray(payloadInfo.len));
-                } catch (e) {
-                    console.error(`    [!] CRASH AVERTED: Failed to read payload binary data. Error: ${e.message}`);
-                }
-            }
+            dumpStdString(args[2], this.timestamp, 'inbound', 'command', 'inbound_command');
+            dumpStdString(args[3], this.timestamp, 'inbound', 'payload', 'inbound_payload');
+            dumpContext(args[4], this.timestamp);
         },
-        onLeave: function(retval) {
-            const timestamp = this.timestamp;
-            const pOutJson = this.pOutJson;
-
-            console.log(`--- Call Return [${timestamp}] ---`);
-
-            const resultInfo = readVendorString(pOutJson);
-            const resultManifest = { timestamp, direction: "outbound", type: "result", object_pointer: pOutJson.toString(), string_content: resultInfo.str };
-            writeLogFile(`outbound_result_${timestamp}.json`, JSON.stringify(resultManifest, null, 2));
-            if (resultInfo.ptr && !resultInfo.ptr.isNull() && !resultInfo.ptr.equals(ptr(-1)) && resultInfo.len > 0) {
-                writeLogFile(`outbound_result_${timestamp}.binary`, resultInfo.ptr.readByteArray(resultInfo.len));
-            }
+        onLeave(retval) {
+            console.log(`--- Call Return [${this.timestamp}] ---`);
+            dumpStdString(this.outPtr, this.timestamp, 'outbound', 'result', 'outbound_result');
         }
     });
 }
 
-setTimeout(main, 500);
+setImmediate(main);

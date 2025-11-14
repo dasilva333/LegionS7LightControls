@@ -1,29 +1,31 @@
 # Build & Run Details
 
-This note records the exact commands we run when rebuilding `SetDetailsBridge` and exercising the worker harness. It also points to `hook_lighting.js`, the Frida hook that confirms the dispatcher schema and payload structure you captured.
+This note records the commands we run when rebuilding SetDetailsBridge, exercising the worker harness, and capturing dispatcher traffic. hook_lighting.js is the Frida hook that confirms the vtable[3] schema.
 
 ## Step-by-step compile + deployment
 
-```powershell
+`powershell
 cd C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetDetailsBridge
 call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
 cl /LD /DUNICODE /D_UNICODE SetDetailsBridge.cpp /EHsc Ole32.lib
 copy SetDetailsBridge.dll ..\SetDetailsTest /y
-```
+`
 
-> The above commands set up the x64 toolchain, compile the bridge into `SetDetailsBridge.dll`, and copy it into the test project so the supervisor harness loads the fresh binary.
+## Running the worker harness (timestamp replay)
 
-## Running the worker harness (supervisor + child)
-
-```powershell
+`powershell
 cd C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetDetailsTest
-"C:\Program Files\dotnet\dotnet.exe" run -- --child
-```
+"C:\Program Files\dotnet\dotnet.exe" run -- 1763152028894
+`
 
-This direct run bypasses the supervisor loop and lets you see the worker output and crash logs in real time. The supervisor variant uses the same `dotnet.exe` path but wraps the run call and monitors for timeouts.
+Replace 1763152028894 with the captured timestamp you want to replay.
 
 ## Frida hook reference
 
-Your `hook_lighting.js` script (also in this repo) attaches to `Gaming.AdvancedLighting.dll`, calls `get_instance()`, and hooks vtable entry `[3]` (`FUN_18004e570`). It logs the actual `inCommand`, `inPayload`, and `outJson` strings the UI sends. Use it to verify that the JSON structure your bridge builds matches the live traffic—especially the fact that the `payload` field is an escaped JSON string, which is the subtle detail causing the earlier crash.
+hook_lighting.js attaches to Gaming.AdvancedLighting.dll, calls get_instance(), and hooks vtable[3]. It logs:
 
-Save those logs alongside the DIFF when you rerun the hook so we always know what “real” traffic looks like when we reproduce the same payload later.
+- inCommand: std::string with the full contract JSON
+- inPayload: std::string logging tag (e.g., "write_log")
+- outJson: result JSON
+
+These logs land under %LOCALAPPDATA%\Temp\traffic and feed the replay bridge.

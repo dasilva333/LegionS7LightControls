@@ -55,6 +55,25 @@ This note maps the JSON→structure parsing functions the DLL uses when handling
 - SetProfileDetails writer 0x11380 consumes an already-parsed detail structure. External callers should provide JSON payload to the dispatcher (or a bridge function that uses these parsers) rather than attempting to build internal memory layouts directly.
 - Keys are lower camel case as confirmed by .rdata strings.
 
+### Dispatcher argument layout (from live capture)
+
+Recent Frida captures (e.g., timestamp `1763152028894`) confirm the ABI Lenovo uses when invoking vftable\[3]:
+
+- `R8` (inCommand) is a normal MSVC `std::string` containing the full JSON envelope shown above. The `payload` field inside this JSON holds the *actual* profile data.
+- `R9` (inPayload) is **not** a copy of the JSON; Lenovo passes a short tag such as `"write_log"` or `""`. Passing the JSON blob here causes Lenovo's parser to SEH, which is why the bridge must forward the captured `string_content` from `inbound_payload_*.json`.
+- `context` (5th argument) is `nullptr` for both `Set-LightingProfileIndex` and `Set-LightingProfileDetails`, so the dispatcher tolerates a null ctx in these flows.
+
+When replaying a capture, mirror this layout exactly:
+
+```cpp
+std::string commandJson = /* captured JSON string_content */;
+std::string payloadTag  = /* captured payload string_content, e.g. "write_log" */;
+std::string resultJson;
+dispatcher(controller, &resultJson, &commandJson, &payloadTag, nullptr);
+```
+
+The command JSON’s `payload` property is what the native parser consumes; the separate `payloadTag` is just used for logging.
+
 ## JSON builder confirmation
 
 - Verified sequence for reading: `init_profile_detail(0x1800014630)` → `BuildPrep` (`0x1800054210`) → `JsonWrite` (`0x1800015ea0`).
