@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "SwitchProfileTest/1.0.0": {
+        "runtime": {
+          "SwitchProfileTest.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "SwitchProfileTest/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

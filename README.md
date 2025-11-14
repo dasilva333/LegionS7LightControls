@@ -6,6 +6,7 @@ Starting now, project folders are grouped by feature:
 
 * `ProfileReaderProject/` – contains `ProfileReader` and the legacy `FinalHarness_cli`.
 * `ProfileBridgeProject/` – contains `ProfileBridge` and the reusable `GetProfileTest` harness.
+* `SwitchProfilesByFilename/` – new harness/bridge pairing that replays any JSON effect from `json_effects/<name>.json`.
 * `BrightnessController/`, `SetProfileDetailsController/`, `SetProfileProject/`, and `FinalHarness/` remain as their own feature folders.
 
 ## Project Status: **Milestone 3 Complete**
@@ -14,7 +15,7 @@ The reverse-engineering phase is complete, and we have successfully achieved rea
 *   Identified the correct DLL (`Gaming.AdvancedLighting.dll`) and its internal architecture.
 *   Bypassed the complex `RequestDispatcher` by discovering the **direct "triplet" method** for calling internal worker functions.
 *   **Successfully read live data** (Brightness, Active Profile ID) directly from the hardware controller's memory.
-*   **Successfully written data** by changing the active lighting profile index (`SetProfileIndex`).
+*   **Successfully written data** by changing the active lighting profile index (`SetProfileIndex`) and by replaying captured `Set-LightingProfileDetails` JSON (via `SwitchProfilesByFilename`).
 *   Captured and documented the **full JSON schema** for lighting profiles.
 *   Built stable C++ bridges and C# test harnesses that demonstrate both read and write capabilities.
 

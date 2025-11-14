@@ -74,6 +74,16 @@ dispatcher(controller, &resultJson, &commandJson, &payloadTag, nullptr);
 
 The command JSON’s `payload` property is what the native parser consumes; the separate `payloadTag` is just used for logging.
 
+### UI call sequence (Set-ProfileEditState + Set-LightingProfileDetails)
+
+Watching the Lenovo UI while changing a profile always produces a trio of dispatcher calls (see timestamps `1763155453886` → `1763155457390` → `1763155459288`):
+
+1. **Enter edit / zone selection** – `Set-ProfileEditState` with the *same* JSON schema used by `Set-LightingProfileDetails`. This captures the currently selected zone and primes the internal buffers.
+2. **Apply effect details** – `Set-LightingProfileDetails` with the full `layers`/`animationConfig` payload (captured above).
+3. **Commit** – `Set-ProfileEditState` with an empty payload (`""`), signalling that editing is finished and the effect should be applied. Skipping this call leaves the controller in edit mode.
+
+Any automated writer needs to mimic this sequence: raise `Set-ProfileEditState` with the desired zone + profileId, send `Set-LightingProfileDetails`, then commit with an empty `Set-ProfileEditState`. Firing the middle call alone (what our early bridge did) reproduces the JSON but causes the dispatcher to fault because the edit session was never opened/closed.
+
 ## JSON builder confirmation
 
 - Verified sequence for reading: `init_profile_detail(0x1800014630)` → `BuildPrep` (`0x1800054210`) → `JsonWrite` (`0x1800015ea0`).

@@ -1,0 +1,15 @@
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileTest\bin\Debug\net10.0\SwitchProfileTest.exe
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileTest\bin\Debug\net10.0\SwitchProfileTest.deps.json
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileTest\bin\Debug\net10.0\SwitchProfileTest.runtimeconfig.json
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileTest\bin\Debug\net10.0\SwitchProfileTest.dll
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileTest\bin\Debug\net10.0\SwitchProfileTest.pdb
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileTest\obj\Debug\net10.0\SwitchProfileTest.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileTest\obj\Debug\net10.0\SwitchProfileTest.AssemblyInfoInputs.cache
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileTest\obj\Debug\net10.0\SwitchProfileTest.AssemblyInfo.cs
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileTest\obj\Debug\net10.0\SwitchProfileTest.csproj.CoreCompileInputs.cache
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileTest\obj\Debug\net10.0\SwitchProfileTest.sourcelink.json
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileTest\obj\Debug\net10.0\SwitchProfileTest.dll
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileTest\obj\Debug\net10.0\refint\SwitchProfileTest.dll
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileTest\obj\Debug\net10.0\SwitchProfileTest.pdb
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileTest\obj\Debug\net10.0\SwitchProfileTest.genruntimeconfig.cache
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileTest\obj\Debug\net10.0\ref\SwitchProfileTest.dll

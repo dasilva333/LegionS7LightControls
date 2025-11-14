@@ -265,6 +265,34 @@ bool LoadCapturedCommand(const std::wstring& timestamp,
     return true;
 }
 
+std::string MakeCancelEvent(const std::string& command)
+{
+    static bool seeded = false;
+    if (!seeded) {
+        std::srand(static_cast<unsigned>(std::time(nullptr)));
+        seeded = true;
+    }
+    std::ostringstream oss;
+    oss << "Gaming.AdvancedLighting-" << command << "#";
+    for (int i = 0; i < 32; ++i) {
+        oss << std::hex << (std::rand() & 0xf);
+    }
+    return oss.str();
+}
+
+std::string BuildCommandJson(const std::string& commandName, const std::string& payloadBody)
+{
+    json cmd;
+    cmd["contract"] = "Gaming.AdvancedLighting";
+    cmd["command"] = commandName;
+    cmd["payload"] = payloadBody;
+    cmd["targetAddin"] = nullptr;
+    cmd["cancelEvent"] = MakeCancelEvent(commandName);
+    cmd["clientId"] = "Consumer";
+    cmd["callerPid"] = static_cast<int>(GetCurrentProcessId());
+    return cmd.dump();
+}
+
 // The single exported function for this bridge now replays a captured dispatcher call
 extern "C" __declspec(dllexport) bool SetProfileJson(const wchar_t* captureTimestamp)
 {
@@ -314,19 +342,32 @@ extern "C" __declspec(dllexport) bool SetProfileJson(const wchar_t* captureTimes
             return false;
         }
 
-        std::string commandName;
-        try {
-            auto cmdJson = json::parse(commandString);
-            commandName = cmdJson.value("command", "");
-        } catch (...) {
-            commandName.clear();
-        }
-
+        auto cmdJson = json::parse(commandString);
+        std::string detailPayload = cmdJson.value("payload", "");
         std::string outString;
-        Log(L"Dispatching captured command '%S'", commandName.c_str());
-        if (!InvokeDispatcherSafe(pDispatcher, pControllerObject, &outString, &commandString, &payloadString, nullptr)) {
-            Log(L"Dispatcher invocation failed");
-            return false;
+        std::string payloadTag = "write_log";
+
+        auto dispatch = [&](const wchar_t* label, std::string& cmd) -> bool {
+            Log(L"Dispatching %s", label);
+            if (!InvokeDispatcherSafe(pDispatcher, pControllerObject, &outString, &cmd, &payloadTag, nullptr)) {
+                Log(L"%s failed", label);
+                return false;
+            }
+            return true;
+        };
+
+        int profileId = cmdJson.value("profileId", 0);
+        std::string editOpen = BuildCommandJson("Set-ProfileEditState", detailPayload);
+        std::string detailCommand = BuildCommandJson("Set-LightingProfileDetails", detailPayload);
+        std::string editClose = BuildCommandJson("Set-ProfileEditState", "");
+        std::string applyCommand = BuildCommandJson("Set-LightingProfileIndex", std::to_string(profileId));
+
+        if (!dispatch(L"Set-ProfileEditState (open)", editOpen)) return false;
+        if (!dispatch(L"Set-LightingProfileDetails", detailCommand)) return false;
+        if (!dispatch(L"Set-ProfileEditState (close)", editClose)) return false;
+        if (profileId != 0)
+        {
+            if (!dispatch(L"Set-LightingProfileIndex", applyCommand)) return false;
         }
 
         std::string resultDump;
