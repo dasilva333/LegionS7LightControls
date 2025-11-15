@@ -7,7 +7,7 @@ using System.Linq;
 public class Program
 {
     [DllImport("SetDetailsBridge.dll", CharSet = CharSet.Unicode, CallingConvention = CallingConvention.Cdecl)]
-    public static extern bool SetProfileJson(string captureTimestamp);
+    public static extern bool SetProfileJson(string captureTimeline);
 
     private static readonly string LogFolder = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -24,9 +24,17 @@ public class Program
 
     public static void Main(string[] args)
     {
-        if (args.FirstOrDefault() == WorkerFlag)
+        // ALWAYS debug the worker directly when running under Visual Studio
+        if (Debugger.IsAttached)
         {
-            RunWorker(args.Skip(1).ToArray());
+            RunWorker(args);
+            return;
+        }
+
+        // Otherwise headless mode (supervisor + worker)
+        if (args.Contains(WorkerFlag))
+        {
+            RunWorker(args);
         }
         else
         {
@@ -34,23 +42,27 @@ public class Program
         }
     }
 
+
+
     public static void RunSupervisor(string[] args)
     {
         Console.WriteLine("--- Supervisor: Launching worker process... ---");
-        var startInfo = new ProcessStartInfo("C:\\Program Files\\dotnet\\dotnet.exe")
+        var exePath = Process.GetCurrentProcess().MainModule!.FileName;
+        var startInfo = new ProcessStartInfo(exePath)
         {
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             CreateNoWindow = true
         };
-        startInfo.ArgumentList.Add("run");
-        startInfo.ArgumentList.Add("--");
+
         startInfo.ArgumentList.Add(WorkerFlag);
+
         foreach (var arg in args)
         {
             startInfo.ArgumentList.Add(arg);
         }
+
 
         var process = Process.Start(startInfo);
         if (process == null) return;
@@ -85,21 +97,22 @@ public class Program
                 return;
             }
 
-            string requestedTimestamp = workerArgs.FirstOrDefault();
-            if (string.IsNullOrWhiteSpace(requestedTimestamp) || requestedTimestamp.Equals("latest", StringComparison.OrdinalIgnoreCase))
+        var requestedTimestamps = workerArgs
+            .Where(arg => !string.IsNullOrWhiteSpace(arg) && !string.Equals(arg, WorkerFlag, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (requestedTimestamps.Count == 0)
             {
-                requestedTimestamp = FindLatestTimestamp(trafficDir);
-                if (requestedTimestamp == null)
-                {
-                    Console.Error.WriteLine("[Worker] No captured commands found to replay.");
-                    Log("No inbound command files detected.");
-                    return;
-                }
+                Console.Error.WriteLine("[Worker] Provide the timestamps to replay in the desired order.");
+                Log("Run aborted: no timestamps supplied.");
+                return;
             }
 
-            Console.WriteLine($"[Worker] Replaying captured dispatcher call {requestedTimestamp}");
-            Log($"Invoking SetProfileJson for timestamp {requestedTimestamp}");
-            if (SetProfileJson(requestedTimestamp))
+            var joined = string.Join(",", requestedTimestamps);
+            Console.WriteLine($"[Worker] Replaying captured dispatcher calls: {string.Join(" ", requestedTimestamps)}");
+            Log($"Invoking SetProfileJson for timeline {joined}");
+
+            if (SetProfileJson(joined))
             {
                 Console.WriteLine("[Worker] SUCCESS: Dispatcher call completed. Check details_setter.log and last_set_result.json.");
                 Log("SetProfileJson returned true");
@@ -117,23 +130,4 @@ public class Program
         }
     }
 
-    private static string? FindLatestTimestamp(string trafficDir)
-    {
-        var files = Directory.GetFiles(trafficDir, "inbound_command_*.json");
-        string? best = null;
-        long bestValue = long.MinValue;
-        foreach (var file in files)
-        {
-            var name = Path.GetFileNameWithoutExtension(file);
-            var parts = name.Split('_');
-            if (parts.Length < 3) continue;
-            var ts = parts[2];
-            if (long.TryParse(ts, out var val) && val > bestValue)
-            {
-                bestValue = val;
-                best = ts;
-            }
-        }
-        return best;
-    }
 }

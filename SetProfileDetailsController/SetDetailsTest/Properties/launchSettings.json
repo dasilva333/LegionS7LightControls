@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "SetDetailsTest": {
+      "commandName": "Project",
+      "commandLineArgs": "1763172168119 1763172172936 1763172172938 1763172178585",
+      "nativeDebugging": true
+    }
+  }
+}
