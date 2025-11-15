@@ -15,7 +15,7 @@ The reverse-engineering phase is complete, and we have successfully achieved rea
 *   Identified the correct DLL (`Gaming.AdvancedLighting.dll`) and its internal architecture.
 *   Bypassed the complex `RequestDispatcher` by discovering the **direct "triplet" method** for calling internal worker functions.
 *   **Successfully read live data** (Brightness, Active Profile ID) directly from the hardware controller's memory.
-*   **Successfully written data** by changing the active lighting profile index (`SetProfileIndex`) and by replaying captured `Set-LightingProfileDetails` JSON (via `SwitchProfilesByFilename`).
+*   **Successfully written data** by changing the active lighting profile index (`SetProfileIndex`), by replaying captured `Set-LightingProfileDetails` JSON (via `SwitchProfilesByFilename`), and by feeding the bridge a full dispatcher timeline (via `SetProfileDetailsController`).
 *   Captured and documented the **full JSON schema** for lighting profiles.
 *   Built stable C++ bridges and C# test harnesses that demonstrate both read and write capabilities.
 
@@ -31,7 +31,7 @@ The reverse-engineering phase is complete, and we have successfully achieved rea
 *   **`docs/`**: A comprehensive folder of markdown files documenting our entire reverse-engineering journey.
 *   **`GetProfileTest/` & `ProfileReader/`**: A C# project and C++ bridge for reliably **reading** the full JSON profile from the keyboard.
 *   **`SetProfileTest/` & `SetProfileBridge/`**: A C# project and C++ bridge for reliably **setting the active profile index**.
-*   **`SetProfileDetailsController/`**: Our current project for implementing full profile **writing**.
+*   **`SetProfileDetailsController/`**: Our current project for implementing full profile **writing**, now capable of replaying the full dispatcher timeline captured via Frida (multiple timestamps + context blobs).
 
 ## Next Steps & Roadmap
 
@@ -46,7 +46,7 @@ The project is now in the application development phase.
 
 ## Build & Execution Notes
 
-To rebuild the latest `SetDetailsBridge` and rerun the worker harness from PowerShell, consult `docs/build_and_run_details.md`. That document now contains the full `vcvars64.bat`/`cl` compile sequence, the copy step for the DLL, and the explicit `C:\Program Files\dotnet\dotnet.exe run -- --child` command we execute from the test project. It also references `hook_lighting.js`, your live Frida hook, so you can correlate the captured command/payload schemas with the exact build/run workflow.
+To rebuild the latest `SetDetailsBridge` and rerun the worker harness from PowerShell, consult `docs/build_and_run_details.md`. That document now contains the full `vcvars64.bat`/`cl` compile sequence, the copy step for the DLL, and the updated `C:\Program Files\dotnet\dotnet.exe run -- <ts-init> <ts-open> <ts-detail> <ts-close>` invocation that replays a captured dispatcher sequence. It also references `hook_lighting.js`, your live Frida hook, so you can correlate the captured command/payload/context blobs with the exact build/run workflow.
 
 ## License
 

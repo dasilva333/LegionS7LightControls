@@ -23,5 +23,5 @@
 ## Tips
 - Trace from string references to find high-level command handlers.
 - Confirm triplets by observing where functions write into the global hardware object (hw = base + 0x7E840).
-- When scrambling JSON layout from code: search for nlohmann::json at(), [] and ranges.
+- When scrambling JSON layout from code: search for `std::string` usage and downstream parsing helpers; Lenovo uses nlohmann::json *inside* the DLL, but the dispatcher boundary is plain `std::string`.
 
