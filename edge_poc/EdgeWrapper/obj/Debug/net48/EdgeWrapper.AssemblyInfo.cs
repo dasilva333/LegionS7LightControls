@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("EdgeWrapper")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+aa531abc813b1d35beeaf2899a68f9ae0ee4d587")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+02c529422e6c7563af333d789e120fb9516fc96b")]
 [assembly: System.Reflection.AssemblyProductAttribute("EdgeWrapper")]
 [assembly: System.Reflection.AssemblyTitleAttribute("EdgeWrapper")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

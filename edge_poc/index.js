@@ -6,23 +6,45 @@ const child = spawn(process.execPath, [workerPath], { stdio: ["ignore", "pipe", 
 
 let sawOutput = false;
 let graceTimer = null;
+let graceKill = false;
+
+console.log("[Supervisor] spawned worker:", workerPath);
 
 child.stdout.on("data", (chunk) => {
   process.stdout.write(chunk);
   if (!sawOutput) {
     sawOutput = true;
+    console.log("[Supervisor] worker emitted output; starting grace timer");
     graceTimer = setTimeout(() => {
-      child.kill("SIGKILL");
-    }, 500);
+      if (!child.killed) {
+        console.log("[Supervisor] grace timeout reached, closing gently");
+        graceKill = true;
+      }
+    }, 5000);
   }
 });
 
 const hardTimeout = setTimeout(() => {
-  child.kill("SIGKILL");
-}, 10000);
+  if (!child.killed) {
+    console.log("[Supervisor] hard timeout reached, stopping the worker");
+    graceKill = true;
+  }
+}, 20000);
 
 child.on("exit", (code, signal) => {
   clearTimeout(hardTimeout);
-  if (graceTimer) clearTimeout(graceTimer);
-  process.exit(signal ? 0 : (code ?? 0));
+  if (graceTimer) {
+    clearTimeout(graceTimer);
+    console.log("[Supervisor] cleared grace timer");
+    if (graceKill) {
+      console.log("[Supervisor] worker reached grace/hard timeout");
+    }
+  }
+  if (signal) {
+    console.error(`[Supervisor] worker terminated by signal ${signal}`);
+    process.exit(1);
+  } else {
+    console.log(`[Supervisor] worker exited with code ${code}`);
+    process.exit(code ?? 0);
+  }
 });

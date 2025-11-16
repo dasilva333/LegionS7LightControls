@@ -1,4 +1,3 @@
-using System;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
@@ -6,49 +5,26 @@ namespace EdgeWrapper
 {
     public class ProfileService
     {
-        [DllImport("ProfileBridge.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
-        private static extern IntPtr GetProfileJson();
+        [DllImport("EdgeProfileBridge.dll", CallingConvention = CallingConvention.Cdecl)]
+        private static extern int GetActiveProfileIdRaw();
+
+        [DllImport("EdgeProfileBridge.dll", CallingConvention = CallingConvention.Cdecl)]
+        private static extern void ShutdownEdgeBridge();
 
         public async Task<object> GetActiveProfileId(object input)
         {
-            IntPtr ptr = GetProfileJson();
-            if (ptr == IntPtr.Zero)
+            int id = GetActiveProfileIdRaw();
+            if (id < 0)
             {
-                throw new InvalidOperationException("GetProfileJson returned null");
+                throw new System.InvalidOperationException($"Native call failed with code {id}");
             }
-
-            string json = Marshal.PtrToStringUni(ptr) ?? string.Empty;
-            Marshal.FreeCoTaskMem(ptr);
-
-            if (string.IsNullOrWhiteSpace(json))
-            {
-                throw new InvalidOperationException("Empty JSON received");
-            }
-
-            int profileId = ParseProfileId(json);
-            return await Task.FromResult<object>(profileId);
+            return await Task.FromResult<object>(id);
         }
 
-        private static int ParseProfileId(string json)
+        public async Task<object> ShutdownBridge(object input)
         {
-            const string marker = "\"profileId\"";
-            int idx = json.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-            if (idx < 0)
-            {
-                throw new InvalidOperationException("profileId not found in JSON");
-            }
-            idx = json.IndexOf(':', idx);
-            if (idx < 0) throw new InvalidOperationException("profileId delimiter missing");
-            idx++;
-            while (idx < json.Length && char.IsWhiteSpace(json[idx])) idx++;
-            int start = idx;
-            while (idx < json.Length && char.IsDigit(json[idx])) idx++;
-            string number = json.Substring(start, idx - start);
-            if (!int.TryParse(number, out int value))
-            {
-                throw new InvalidOperationException("Unable to parse profileId");
-            }
-            return value;
+            ShutdownEdgeBridge();
+            return await Task.FromResult<object>(null);
         }
     }
 }

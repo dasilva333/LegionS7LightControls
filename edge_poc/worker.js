@@ -9,6 +9,12 @@ const getProfileId = edge.func({
   methodName: "GetActiveProfileId"
 });
 
+const shutdownBridge = edge.func({
+  assemblyFile: assemblyPath,
+  typeName: "EdgeWrapper.ProfileService",
+  methodName: "ShutdownBridge"
+});
+
 getProfileId(null, (error, result) => {
   if (error) {
     console.error("Edge call failed:", error);
@@ -16,5 +22,14 @@ getProfileId(null, (error, result) => {
     return;
   }
   console.log("Active profile id:", result);
-  process.exit(0);
+  console.log("Calling shutdown hook...");
+  shutdownBridge(null, (shutdownError) => {
+    if (shutdownError) {
+      console.error("Shutdown failed:", shutdownError);
+      process.exit(1);
+      return;
+    }
+    console.log("Shutdown complete.");
+    process.exit(0);
+  });
 });
