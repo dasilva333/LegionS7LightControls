@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "SetEditStateTest": {
+      "commandName": "Project",
+      "commandLineArgs": "1763172172936",
+      "nativeDebugging": true
+    }
+  }
+}

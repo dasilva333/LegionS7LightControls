@@ -15,6 +15,7 @@ using json = nlohmann::json;
 #pragma comment(lib, "dbghelp.lib")
 
 using InitProfileFunc = void (__cdecl*)(long long hw, unsigned int* detail, void* scratch, char* ctx);
+using GetProfileIndexFunc = void (__cdecl*)(void* hw);
 using VftableDispatcherFunc = void(__fastcall*)(void* thisPtr, std::string* outResult, std::string* inCommand, std::string* inPayload, void* ctx);
 
 namespace
@@ -160,35 +161,6 @@ std::wstring GetModuleDirectory()
     return L".";
 }
 
-bool LoadCommandTemplate(std::string& outTemplate)
-{
-    std::wstring moduleDir = GetModuleDirectory();
-    std::wstring templatePath = moduleDir + L"\\command_template.json";
-    return ReadUtf8File(templatePath, outTemplate);
-}
-
-std::string EscapeJsonString(const std::string& input)
-{
-    std::string output;
-    output.reserve(input.size() * 2);
-    for (char c : input) {
-        if (c == '"' || c == '\\') {
-            output.push_back('\\');
-        }
-        output.push_back(c);
-    }
-    return output;
-}
-
-void ReplaceToken(std::string& target, const std::string& token, const std::string& value)
-{
-    size_t pos = 0;
-    while ((pos = target.find(token, pos)) != std::string::npos) {
-        target.replace(pos, token.length(), value);
-        pos += value.length();
-    }
-}
-
 extern "C" __declspec(dllexport) bool ApplyProfileByFilename(const wchar_t* profileName)
 {
     Log(L"--- ApplyProfileByFilename begin ---");
@@ -205,24 +177,13 @@ extern "C" __declspec(dllexport) bool ApplyProfileByFilename(const wchar_t* prof
     }
     Log(L"Loaded effect %s (%zu bytes)", effectPath.c_str(), payloadRaw.size());
 
-    std::string minifiedPayload;
+    json effectJson;
     try {
-        minifiedPayload = json::parse(payloadRaw).dump();
+        effectJson = json::parse(payloadRaw);
     } catch (const std::exception& ex) {
         Log(L"JSON parse failed (%S)", ex.what());
         return false;
     }
-
-    std::string commandTemplate;
-    if (!LoadCommandTemplate(commandTemplate)) {
-        Log(L"Failed to load command template");
-        return false;
-    }
-    std::string commandJson = commandTemplate;
-    ReplaceToken(commandJson, "__PAYLOAD__", EscapeJsonString(minifiedPayload));
-    ReplaceToken(commandJson, "__CANCEL_EVENT__", MakeCancelEvent("Set-LightingProfileDetails"));
-
-    std::string payloadTag = "write_log";
 
     HMODULE hModule = LoadLibraryW(L"C:\\ProgramData\\Lenovo\\Vantage\\Addins\\LenovoGamingUserAddin\\1.3.1.34\\Gaming.AdvancedLighting.dll");
     if (!hModule) {
@@ -249,6 +210,7 @@ extern "C" __declspec(dllexport) bool ApplyProfileByFilename(const wchar_t* prof
 
     uintptr_t base = reinterpret_cast<uintptr_t>(hModule);
     auto initProfile = reinterpret_cast<InitProfileFunc>(base + 0x14630);
+    auto getProfileIndex = reinterpret_cast<GetProfileIndexFunc>(base + 0x11210);
     if (!initProfile) {
         Log(L"init_profile_detail missing");
         return false;
@@ -259,6 +221,32 @@ extern "C" __declspec(dllexport) bool ApplyProfileByFilename(const wchar_t* prof
     void* hw = reinterpret_cast<void*>(base + 0x7E840);
     initProfile(reinterpret_cast<long long>(hw), details, scratch, nullptr);
     Log(L"init_profile_detail invoked");
+
+    uint32_t activeProfileId = 0;
+    if (getProfileIndex) {
+        getProfileIndex(hw);
+        activeProfileId = *reinterpret_cast<uint32_t*>(reinterpret_cast<char*>(hw) + 0x154);
+    } else {
+        Log(L"get_profile_index missing; defaulting profile id to current cache");
+        activeProfileId = details[0];
+    }
+    Log(L"Active profile id detected: %u", activeProfileId);
+    effectJson["profileId"] = activeProfileId;
+    std::string payloadInner = effectJson.dump();
+    Log(L"Updated payload JSON length: %zu", payloadInner.size());
+
+    json commandObj;
+    commandObj["contract"] = "Gaming.AdvancedLighting";
+    commandObj["command"] = "Set-LightingProfileDetails";
+    commandObj["payload"] = payloadInner;
+    commandObj["targetAddin"] = nullptr;
+    commandObj["cancelEvent"] = MakeCancelEvent("Set-LightingProfileDetails");
+    commandObj["clientId"] = "Consumer";
+    commandObj["callerPid"] = static_cast<int>(GetCurrentProcessId());
+
+    std::string commandJson = commandObj.dump();
+    std::string payloadTag = "write_log";
+    Log(L"Final command JSON: %hs", commandJson.c_str());
 
     void** vtable = *reinterpret_cast<void***>(controller);
     auto dispatcher = reinterpret_cast<VftableDispatcherFunc>(vtable[3]);

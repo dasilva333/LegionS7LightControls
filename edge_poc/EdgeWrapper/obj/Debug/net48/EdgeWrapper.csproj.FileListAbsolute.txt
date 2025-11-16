@@ -1,0 +1,10 @@
+C:\Users\h4rdc\keyboard-led-project\edge_poc\EdgeWrapper\obj\Debug\net48\EdgeWrapper.csproj.AssemblyReference.cache
+C:\Users\h4rdc\keyboard-led-project\edge_poc\EdgeWrapper\obj\Debug\net48\EdgeWrapper.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\h4rdc\keyboard-led-project\edge_poc\EdgeWrapper\obj\Debug\net48\EdgeWrapper.AssemblyInfoInputs.cache
+C:\Users\h4rdc\keyboard-led-project\edge_poc\EdgeWrapper\obj\Debug\net48\EdgeWrapper.AssemblyInfo.cs
+C:\Users\h4rdc\keyboard-led-project\edge_poc\EdgeWrapper\obj\Debug\net48\EdgeWrapper.csproj.CoreCompileInputs.cache
+C:\Users\h4rdc\keyboard-led-project\edge_poc\EdgeWrapper\obj\Debug\net48\EdgeWrapper.sourcelink.json
+C:\Users\h4rdc\keyboard-led-project\edge_poc\EdgeWrapper\bin\Debug\net48\EdgeWrapper.dll
+C:\Users\h4rdc\keyboard-led-project\edge_poc\EdgeWrapper\bin\Debug\net48\EdgeWrapper.pdb
+C:\Users\h4rdc\keyboard-led-project\edge_poc\EdgeWrapper\obj\Debug\net48\EdgeWrapper.dll
+C:\Users\h4rdc\keyboard-led-project\edge_poc\EdgeWrapper\obj\Debug\net48\EdgeWrapper.pdb

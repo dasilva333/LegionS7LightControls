@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GetProfileTest")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e0962f1cbefa31a657bed6d8f411810db17a4572")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+aa531abc813b1d35beeaf2899a68f9ae0ee4d587")]
 [assembly: System.Reflection.AssemblyProductAttribute("GetProfileTest")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GetProfileTest")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
