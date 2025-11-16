@@ -5,10 +5,74 @@
 This project implements a multi-layered, event-driven architecture to provide full programmatic control over the Lenovo Legion keyboard lighting system. It is designed for stability, flexibility, and long-term extensibility.
 
 *   **Core Controller (Node.js + Express):** `server.js`
-    *   Hosts a comprehensive REST API for all lighting operations.
-    *   Acts as the central "brain," containing all high-level logic (scheduling, notifications, process monitoring).
-    *   Manages a SQLite database via **Knex.js** for persistent configuration.
-    *   Spawns and supervises disposable `worker.js` processes for each native call, ensuring the main server never crashes or hangs.
+    *   **Primary Role:** Acts as the application's main entry point, HTTP server, and route loader. It contains **no business logic** itself.
+    *   **Dynamic Route Loading:**
+        *   On startup, `server.js` will recursively scan a dedicated `api/` directory.
+        *   It will search for `.js` files that export a specific contract: `{ method, route, handler }`.
+        *   For each valid file found, it will dynamically register the `handler` function to the corresponding Express `app[method]` at the specified `route`. This creates a strict **one file per endpoint** architecture.
+        *   This pattern keeps the `server.js` file clean and makes adding new endpoints as simple as dropping a new file into the `api/` directory.
+    *   **High-Level Systems:** It will also initialize and start the long-running background tasks, such as the **Time-of-Day Scheduler** and the **Process Override Monitor**.
+    *   **Worker Supervision:** It contains the supervisor logic for spawning and managing disposable `worker.js` processes, which the route handlers will call.
+
+**Example `api/profiles/getActive.js`:**
+This demonstrates your clean, self-contained, single-endpoint pattern.
+```javascript
+const { spawnWorker } = require('../../worker-manager'); // A helper to manage workers
+
+module.exports = {
+    // The HTTP method for this endpoint
+    method: 'get',
+    
+    // The route path
+    route: '/profiles/active',
+    
+    // The handler function, containing all business logic for this endpoint
+    handler: async (req, res) => {
+        try {
+            const resultJson = await spawnWorker('GetProfileJson');
+            // The worker returns a string, so we parse it into a real object
+            res.json(JSON.parse(resultJson));
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+};
+```
+
+**Example `server.js` loading logic:**
+```javascript
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const app = express();
+// ... other setup ...
+
+const apiDir = path.join(__dirname, 'api');
+
+function registerRoutes(directory) {
+  fs.readdirSync(directory, { withFileTypes: true }).forEach(entry => {
+    const fullPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      registerRoutes(fullPath); // Recurse into subdirectories
+    } else if (entry.name.endsWith('.js')) {
+      try {
+        const routeModule = require(fullPath);
+        const { method, route, handler } = routeModule;
+
+        if (method && route && typeof handler === 'function') {
+          // Register the route with Express
+          app[method.toLowerCase()](route, handler);
+          console.log(`[API] Registered: ${method.toUpperCase()} ${route}`);
+        }
+      } catch (error) {
+        console.error(`[API] Failed to load route from ${entry.name}:`, error);
+      }
+    }
+  });
+}
+
+registerRoutes(apiDir);
+```
 
 *   **Worker Process (Node.js + edge-js):** `worker.js`
     *   A short-lived, single-task script that receives a command and payload from the supervisor.
@@ -193,8 +257,8 @@ This section defines the complete REST API for the lighting controller. All inte
     *   **Response:** `200 OK` with the updated gradient object.
 
 *   **`DELETE /time-gradients/:id`**
-    *   **Action:** Removes a time gradient period from the scheduler.
-    *   **Response:** `204 No Content`.
+  *   **Action:** Removes a time gradient period from the scheduler.
+  *   **Response:** `204 No Content`.
 
 ## 4. Behavior Layers (High-Level Logic in `server.js`)
 
@@ -310,5 +374,68 @@ This endpoint is the entry point for all notifications.
 4.  **Asynchronous Revert:** The function does **not** wait. It immediately returns a `202 Accepted` response to the caller. It then starts an asynchronous `setTimeout` timer.
     *   `setTimeout(() => { ... }, duration_ms);`
 5.  **Restore State:** When the timer fires, the callback function will execute:
-    *   It makes one final internal API call to `/set-active-profile/:id`, passing the `currentProfileId` that was saved in step 2. This restores the keyboard to its previous state (likely the time-of-day color).
+  *   It makes one final internal API call to `/set-active-profile/:id`, passing the `currentProfileId` that was saved in step 2. This restores the keyboard to its previous state (likely the time-of-day color).
 
+
+
+
+
+
+
+
+## 5. Hardware Layer & Native API Plan
+
+### 5.1 Native API Surface
+- **`GetActiveProfileId`** � Reads the controller state to discover which profile slot is currently live; used by `/active-profile` and by every payload that needs to mirror the active slot.
+- **`GetProfileDetails`** � Returns the `{ layers, animationConfig, profileId }` JSON for diagnostics or for composing new effects that respect the current lighting state.
+- **`SetProfileDetails`** � Dispatches a `{ layers, profileId }` command through Gaming.AdvancedLighting.dll; all color writes (`/apply-profile/:name`, `/apply-payload`, `/notify`, `/switch-by-filename`) funnel through this single helper.
+- **`ShutdownBridge`** � Tears down the helper threads the native bridge spawns inside Lenovo's DLLs. Every worker must call this before exiting.
+
+These four helpers are deliberately the only native entry points we expose. The Node/Express layer never touches Lenovo's internals directly; it only talks to this small surface.
+
+### 5.2 Automation Folder & Bridge Layout
+- Everything lives under `automation/edge_bridge/`. The artifacts are:
+  * `EdgeProfileBridge.dll` (native C++): loads `Gaming.AdvancedLighting.dll`, resolves RVAs, and implements the helpers above plus any helper logging we need for replay accuracy.
+  * `EdgeWrapper.dll` (net48 C#): exposes public static methods (`GetActiveProfileId`, `GetProfileDetailsJson`, `SetProfileDetails`, `ShutdownBridge`) and P/Invokes into `EdgeProfileBridge.dll`.
+  * `automation/edge_bridge/worker.js`: receives commands from the supervisor, routes them through edge-js into `EdgeWrapper`, logs the result, calls `ShutdownBridge`, and exits.
+  * `automation/edge_bridge/supervisor.js` (or `index.js`): launches `worker.js`, streams logs, reaps the process, and exposes a clean graceful-shutdown path to the Express service.
+
+This layout keeps the native layer focused on hardware concerns while JavaScript orchestrates scheduling, logging, and endpoint logic.
+
+### 5.3 Worker Call Flow
+- Express endpoints prepare the payload (load a `json_effects` file, rewrite `profileId` using `GetActiveProfileId`, or accept a raw `{ layers, profileId }`).
+- The supervisor spawns `worker.js` with the command name/payload, watches stdout for success/failure, and enforces timeouts if the worker misbehaves.
+- Inside `worker.js`, edge-js calls the corresponding method on `EdgeWrapper.ProfileService`, logs the response, invokes `ShutdownBridge`, and exits with an appropriate status code.
+- No bridge threads stay alive between API calls; every native interaction is scoped to a single worker lifetime.
+
+### 5.4 API Mapping & Endpoint Calls
+- `/active-profile` ? `GetActiveProfileId` (optionally enrich with `GetProfileDetails`).
+- `/apply-profile/:name` ? load `json_effects/:name`, rewrite `profileId`, build the command/envelope (per `SwitchProfilesByFilename`), and call `SetProfileDetails`.
+- `/apply-payload` ? accept `{ layers, profileId }`, wrap it into the dispatcher payload, send via the worker.
+- `/set-active-profile` ? leverages the existing SetProfileIndex helper (or dispatcher) to switch slots when needed.
+- `/notify` ? selects a stored effect, rewrites its `profileId`, and dispatches it immediately.
+
+All endpoints delegate to `automation/edge_bridge/worker.js`, which is the only path that touches the native DLLs. Mentioned logs and graceful shutdown ensure the high-level service stays responsive even if Lenovo's dispatcher misbehaves.
+
+## 6. Automation Folder Layout & Test Harness
+
+The automation workspace under `automation/` is our living environment for the native bridge, Express backend, and headless testing support. Split it like this:
+
+- `automation/backend/` – the Express service and its helpers.
+  * `backend/api/` – all REST route modules (e.g., `active-profile.js`, `apply-profile.js`, `notify.js`). Keeping this folder light encourages reusability and testability.
+  * `backend/express.js` – wires the routes, scheduler, notification logic, and process monitor together.
+  * `backend/db/` – Knex migrations, seeds, and helper utilities that encapsulate the `global_settings`, `processes`, `notifications`, and `time_gradients` tables.
+  * `backend/json_effects/` – a copy (or symlink) of the shared `json_effects/` payload library so backend unit tests can load real data without reaching outside the automation workspace. A CI script can refresh this folder when the master copy changes.
+
+- `automation/frontend/` – placeholder for the Ionic app structure (`frontend/src`, `frontend/public`, etc.). No manual editing needed; let Ionic initialize the scaffold, and treat this folder as the future UI surface that will call the backend over HTTP.
+
+- `automation/backend/test/` – headless harnesses that exercise the native helpers directly.
+  * Each test script (e.g., `test_get_index.js`, `test_apply_payload.js`) lives here and can be run without starting the full Express server.
+  * Scripts use the supervisor/worker stack (spawn `automation/edge_bridge/worker.js`) to query `GetActiveProfileId`, build envelopes, dispatch payloads, and assert the expected log output.
+  * These tests serve as regression checks and allow you to debug native behavior quickly before the REST API ever touches it.
+
+- `automation/edge_bridge/test_files/` – shared fixtures for worker tests (sample payloads, command envelopes, context blobs). Tests can load these files to verify serialization and logging without reusing production traffic.
+
+- `automation/edge_bridge/` – contains the native/C# bridge as described in Section 5.
+
+Keeping this layout enforces a clean separation: the backend Express app gets its own directory, frontend assets follow Ionic conventions, `json_effects` stays next to the backend logic it powers, and the `automation/backend/test` scripts provide the “headless verification” layer you explicitly requested.
