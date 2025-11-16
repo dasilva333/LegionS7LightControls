@@ -1,16 +1,10 @@
-Excellent plan. Moving from a robust backend design to a clear frontend vision is the perfect next step. A well-designed UI is what will bring all of our hard work to life.
-
-Here is the complete design document for the frontend, built to your exact specifications using the Ionic starter template model.
-
----
-
 # Frontend Design Blueprint (`latest_goals_frontend_design.md`)
 
 This document outlines the architecture and design for the Unofficial Lenovo Lighting Controller's user interface. It will be a modern, cross-platform Progressive Web App (PWA) built with **Ionic** and **Angular** (or React/Vue, as preferred).
 
 ## 1. Stack & Architecture
 
-*   **Framework:** **Ionic Framework** with the **Tabs** starter template. This provides a professional, mobile-first UI foundation with pre-built navigation that works perfectly on desktop.
+*   **Framework:** **Ionic Framework** with the **Tabs** starter template. This provides a professional, mobile-first UI foundation with pre-built navigation that works perfectly on desktop. Using Typescript + React.
 *   **Backend Communication:** The frontend is a pure client-side application. It will communicate exclusively with the Node.js/Express backend API running on `http://localhost:3005`. All state and control commands will be sent via REST API calls.
 *   **Deployment:**
     *   **Development:** Served via `ionic serve` on a local development port (e.g., `8100`), configured to proxy API requests to `localhost:3005` to avoid CORS issues.

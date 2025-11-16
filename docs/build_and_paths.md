@@ -17,15 +17,15 @@ Build:
 - 
 ## .NET (CLI Harness)
 
-- Use explicit dotnet path:
-  - "C:\\Program Files\\dotnet\\dotnet.exe"
+- Always invoke the SDK via its full qualified path to avoid Windows asking which app should handle `dotnet`. In PowerShell use:
+  - `& "C:\\Program Files\\dotnet\\dotnet.exe" ...`
 
 FinalHarness_cli (non-interactive runner):
-- dotnet build C:\\Users\\h4rdc\\keyboard-led-project\\FinalHarness_cli
-- Examples:
-  - dotnet run --project C:\\Users\\h4rdc\\keyboard-led-project\\FinalHarness_cli -- --BrightnessLevel
-  - dotnet run --project C:\\Users\\h4rdc\\keyboard-led-project\\FinalHarness_cli -- --LightingProfileIndex
-  - dotnet run --project C:\\Users\\h4rdc\\keyboard-led-project\\FinalHarness_cli -- --LightingProfileInfo 4
+  - `"C:\\Program Files\\dotnet\\dotnet.exe" build C:\\Users\\h4rdc\\keyboard-led-project\\FinalHarness_cli`
+  - Examples:
+    - `"C:\\Program Files\\dotnet\\dotnet.exe" run --project C:\\Users\\h4rdc\\keyboard-led-project\\FinalHarness_cli -- --BrightnessLevel`
+    - `"C:\\Program Files\\dotnet\\dotnet.exe" run --project C:\\Users\\h4rdc\\keyboard-led-project\\FinalHarness_cli -- --LightingProfileIndex`
+    - `"C:\\Program Files\\dotnet\\dotnet.exe" run --project C:\\Users\\h4rdc\\keyboard-led-project\\FinalHarness_cli -- --LightingProfileInfo 4`
 
 
 # set profile harness
