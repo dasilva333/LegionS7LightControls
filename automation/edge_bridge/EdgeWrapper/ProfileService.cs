@@ -21,6 +21,10 @@ namespace EdgeWrapper
         [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool SetProfileDetailsJsonRaw(string jsonPayload);
 
+        [DllImport(BridgeDll, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        private static extern bool SendRawTrafficRaw(string commandJson);
+
         [DllImport(BridgeDll, CallingConvention = CallingConvention.Cdecl)]
         private static extern int SetProfileIndexRaw(int profileId);
 
@@ -62,6 +66,15 @@ namespace EdgeWrapper
             return await Task.FromResult<object>(true);
         }
 
+        public async Task<object> SendRawTraffic(object input)
+        {
+            if (input == null) throw new ArgumentNullException(nameof(input));
+            string packet = input as string ?? input.ToString();
+            bool result = SendRawTrafficRaw(packet);
+            if (!result) throw new InvalidOperationException("SendRawTrafficRaw failed");
+            return await Task.FromResult<object>(true);
+        }
+
         public async Task<object> SetProfileIndex(object input)
         {
             if (input == null) throw new ArgumentNullException(nameof(input));
@@ -70,7 +83,10 @@ namespace EdgeWrapper
                 throw new ArgumentException("Profile index must be an integer", nameof(input));
             }
             int code = SetProfileIndexRaw(profileId);
-            if (code != 1) throw new InvalidOperationException($"SetProfileIndexRaw failed (code {code})");
+            if (code != 1 && code != -3)
+            {
+                throw new InvalidOperationException($"SetProfileIndexRaw failed (code {code})");
+            }
             return await Task.FromResult<object>(true);
         }
 

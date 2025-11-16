@@ -87,6 +87,7 @@ Here is a fully expanded, more detailed version of your project checklist.
 ### **2.5 Backend / Headless Test Harnesses**
 - [x] Create reusable test scripts under `automation/backend/test/` that call `spawnWorker(...)` directly for each native helper (profile ID, brightness, JSON, set index/set details).
 - [x] Add fixtures under `automation/edge_bridge/test_files/` for captured command/context blobs so tests can replay the exact dispatcher payloads.
+- [x] Provide `action_raw_setlightingprofiledetails.json` and the `SendRawTraffic` helper so the harness can replay captured `string_content` envelopes.
 - [x] Ensure `automation/backend/test` scripts can consume `json_effects/` samples and validate the generated `SetProfileDetails` JSON before dispatch.
 - [x] Log every test invocation to `%LOCALAPPDATA%\ProfileBridge\test.log` and surface pass/fail via the supervisor wrapper.
 - [x] Wire the backend test scripts into `automation/backend/supervisor.js` so they can be triggered via CLI (e.g., `node automation/backend/supervisor.js "{\"method\":\"GetActiveProfileId\"}"`).

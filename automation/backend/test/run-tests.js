@@ -21,6 +21,13 @@ function loadPayloadFixture() {
   return envelope.string_content || "";
 }
 
+function loadCommandFixture() {
+  const fixturePath = path.join(__dirname, "..", "edge_bridge", "test_files", "set_profile_details", "inbound_command_1763172178585.json");
+  if (!fs.existsSync(fixturePath)) return "";
+  const envelope = JSON.parse(fs.readFileSync(fixturePath, "utf8"));
+  return envelope.string_content || "";
+}
+
 function effectFiles() {
   const dir = path.join(__dirname, "..", "json_effects");
   if (!fs.existsSync(dir)) return [];
@@ -47,7 +54,8 @@ const actions = [
   { method: "GetBrightness" },
   { method: "GetProfileJson" },
   { method: "SetProfileIndex", profileId: 1 },
-  { method: "SetProfileDetails", payload: loadPayloadFixture() }
+  { method: "SetProfileDetails", payload: loadPayloadFixture() },
+  { method: "SendRawTraffic", payload: loadCommandFixture() }
 ];
 
 async function run() {
@@ -57,9 +65,12 @@ async function run() {
     const label = action.method;
     log(`Invoking ${label}`);
     try {
-      const result = await spawnWorker(action, 15000);
+      const result = await spawnWorker(action);
       if (result && result.code === 0) {
         log(`${label} succeeded (code=${result.code})`);
+        if (typeof result.payload === "string") {
+          log(`${label} payload: ${result.payload}`);
+        }
       } else {
         log(`${label} returned non-zero code ${result.code}`);
       }

@@ -1,0 +1,23 @@
+{"method":"SetProfileDetails","payload":{
+    "profileId":  4,
+    "layers":  [
+                   {
+                       "layerId":  1,
+                       "keys":  [
+
+                                ],
+                       "animationConfig":  {
+                                               "colorType":  2,
+                                               "direction":  0,
+                                               "speed":  0,
+                                               "colorSize":  1,
+                                               "colorList":  [
+                                                                 "System.Collections.Hashtable"
+                                                             ],
+                                               "transition":  0,
+                                               "clockwise":  0,
+                                               "animationId":  11
+                                           }
+                   }
+               ]
+}}

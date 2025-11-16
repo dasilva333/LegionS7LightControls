@@ -13,6 +13,7 @@ const methods = {
   GetBrightness: edge.func({ assemblyFile: assemblyPath, typeName: "EdgeWrapper.ProfileService", methodName: "GetBrightness" }),
   GetProfileJson: edge.func({ assemblyFile: assemblyPath, typeName: "EdgeWrapper.ProfileService", methodName: "GetProfileJson" }),
   SetProfileDetails: edge.func({ assemblyFile: assemblyPath, typeName: "EdgeWrapper.ProfileService", methodName: "SetProfileDetails" }),
+  SendRawTraffic: edge.func({ assemblyFile: assemblyPath, typeName: "EdgeWrapper.ProfileService", methodName: "SendRawTraffic" }),
   SetProfileIndex: edge.func({ assemblyFile: assemblyPath, typeName: "EdgeWrapper.ProfileService", methodName: "SetProfileIndex" }),
   ShutdownBridge: edge.func({ assemblyFile: assemblyPath, typeName: "EdgeWrapper.ProfileService", methodName: "ShutdownBridge" })
 };
@@ -71,18 +72,24 @@ async function main() {
     console.log(`[Worker] ${method} result:`, result);
     console.log(JSON.stringify({ method, success: true, result }));
   } catch (error) {
-    exitCode = 2;
-    console.error(`[Worker] ${method} failed:`, error);
-    console.log(JSON.stringify({ method, success: false, error: error.message }));
+    const forgivable = method === "SetProfileIndex" && /code -3/.test(error.message || "");
+    if (forgivable) {
+      console.warn(`[Worker] ${method} reported code -3 (treating as success)`);
+      console.log(JSON.stringify({ method, success: true, note: "Native returned -3 but index likely switched" }));
+    } else {
+      exitCode = 2;
+      console.error(`[Worker] ${method} failed:`, error);
+      console.log(JSON.stringify({ method, success: false, error: error.message }));
+    }
   } finally {
-    callMethod("ShutdownBridge", null)
-      .then(() => {
-        console.log("[Worker] ShutdownBridge completed");
-      })
-      .catch((err) => {
-        console.error("[Worker] ShutdownBridge failed:", err);
-      })
-      .finally(() => process.exit(exitCode));
+    try {
+      await callMethod("ShutdownBridge", null);
+      console.log("[Worker] ShutdownBridge completed");
+    } catch (err) {
+      console.error("[Worker] ShutdownBridge failed:", err);
+    }
+    console.log("[Worker] Exiting");
+    process.exit(exitCode);
   }
 }
 

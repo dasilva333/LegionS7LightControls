@@ -20,6 +20,12 @@ node automation/backend/worker.js @"automation/backend/action.json"
 ```
 The JSON file should include `{ "method": "...", "payload": ... }`. The worker prints structured JSON lines that the supervisor can consume.
 
+### Replay a captured dispatcher packet
+```powershell
+node automation/backend/worker.js @"automation/backend/action_raw_setlightingprofiledetails.json"
+```
+`action_raw_setlightingprofiledetails.json` wraps the `string_content` from `%LOCALAPPDATA%\Temp\traffic\inbound_command_*.json` and dispatches it through the `SendRawTraffic` bridge. Use this when you want a faithful replay of Lenovo's recorded command payloads.
+
 ### Supervisor helper
 ```powershell
 node automation/backend/supervisor.js "{\"method\":\"GetActiveProfileId\"}"

@@ -50,6 +50,15 @@ static void EnsureEntry()
     g_entryCalled = true;
 }
 
+static void* CallGetInstance()
+{
+    if (!g_hModule) return nullptr;
+    using GetInstanceFunc = void* (*)();
+    auto getInstance = reinterpret_cast<GetInstanceFunc>(GetProcAddress(g_hModule, "get_instance"));
+    if (!getInstance) return nullptr;
+    return getInstance();
+}
+
 // Resolves the internal hardware object pointer (`hw`)
 static void* ResolveHardwareObject()
 {
@@ -190,6 +199,7 @@ extern "C" __declspec(dllexport) int __cdecl GetActiveProfileIdRaw()
 {
     if (!EnsureInitialized()) return -1;
     EnsureEntry();
+    CallGetInstance();
     void* hw = ResolveHardwareObject();
     if (!PrepareHwState(hw)) return -3;
     auto pGetProfileIndex = reinterpret_cast<GetProfileIndexFunc>(reinterpret_cast<uintptr_t>(g_hModule) + 0x11210);
@@ -200,6 +210,10 @@ extern "C" __declspec(dllexport) int __cdecl GetActiveProfileIdRaw()
         return -2;
     }
     int currentId = *reinterpret_cast<int*>(reinterpret_cast<char*>(hw) + 0x154);
+    if (currentId == 0) {
+        int alt = *reinterpret_cast<int*>(reinterpret_cast<char*>(hw) + 0x1A8);
+        if (alt != 0) currentId = alt;
+    }
     return currentId;
 }
 
@@ -207,6 +221,7 @@ extern "C" __declspec(dllexport) int __cdecl GetBrightnessRaw()
 {
     if (!EnsureInitialized()) return -1;
     EnsureEntry();
+    CallGetInstance();
     void* hw = ResolveHardwareObject();
     if (!PrepareHwState(hw)) return -3;
     auto pGetBrightness = reinterpret_cast<GetBrightnessFunc>(reinterpret_cast<uintptr_t>(g_hModule) + 0x14110);
@@ -373,4 +388,33 @@ extern "C" __declspec(dllexport) bool __cdecl SetProfileDetailsJsonRaw(const wch
     std::string outResult;
 
     return InvokeDispatcherSafe(dispatcher, controller, &outResult, &commandJson, &payloadTag, nullptr);
+}
+
+#define RawString(str) (str ? str : L"")
+extern "C" __declspec(dllexport) bool __cdecl SendRawTrafficRaw(const wchar_t* commandJson)
+{
+    if (!commandJson || commandJson[0] == L'\0') return false;
+    if (!EnsureInitialized()) return false;
+    uintptr_t base = reinterpret_cast<uintptr_t>(g_hModule);
+    EnsureEntry();
+    void* controller = CallGetInstance();
+    if (!controller) return false;
+
+    std::string commandUtf8;
+    {
+        const wchar_t* src = commandJson;
+        int len = WideCharToMultiByte(CP_UTF8, 0, src, -1, nullptr, 0, nullptr, nullptr);
+        if (len <= 0) return false;
+        commandUtf8.resize(len - 1);
+        WideCharToMultiByte(CP_UTF8, 0, src, -1, &commandUtf8[0], len, nullptr, nullptr);
+    }
+    std::string payloadTag = "write_log";
+    std::string outResult;
+
+    void** vftable = *reinterpret_cast<void***>(controller);
+    if (!vftable) return false;
+    VftableDispatcherFunc dispatcher = reinterpret_cast<VftableDispatcherFunc>(vftable[3]);
+    if (!dispatcher) return false;
+
+    return InvokeDispatcherSafe(dispatcher, controller, &outResult, &commandUtf8, &payloadTag, nullptr);
 }
