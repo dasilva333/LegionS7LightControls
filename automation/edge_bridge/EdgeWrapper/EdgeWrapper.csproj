@@ -1,13 +1,38 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Common properties for all builds -->
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
     <RootNamespace>EdgeWrapper</RootNamespace>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <EnableComHosting>false</EnableComHosting>
+    <!-- Define a common base output path -->
+    <BaseOutputPath>bin\</BaseOutputPath>
   </PropertyGroup>
+
+  <!-- This is the default configuration for the Library (DLL) -->
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <AssemblyName>EdgeProfileWrapper</AssemblyName>
+    <!-- Set the final output path for the DLL -->
+    <OutputPath>$(BaseOutputPath)$(Platform)\$(Configuration)\$(TargetFramework)\Lib\</OutputPath>
+  </PropertyGroup>
+
+  <!-- This block OVERRIDES properties ONLY when building the EXE -->
+  <PropertyGroup Condition="'$(IsWorkerBuild)' == 'true'">
+    <OutputType>Exe</OutputType>
+    <StartupObject>EdgeWrapper.Worker</StartupObject>
+    <AssemblyName>EdgeProfileWorker</AssemblyName>
+    <!-- Set a DIFFERENT final output path for the EXE -->
+    <OutputPath>$(BaseOutputPath)$(Platform)\$(Configuration)\$(TargetFramework)\Exe\</OutputPath>
+  </PropertyGroup>
+
+  <!-- This ensures the native C++ DLL is copied to BOTH output directories -->
   <ItemGroup>
     <None Include="..\EdgeProfileBridge\EdgeProfileBridge.dll">
       <Link>EdgeProfileBridge.dll</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+
 </Project>

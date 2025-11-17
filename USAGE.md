@@ -17,6 +17,7 @@ This exercise the native helpers via the supervisor/worker stack, validates `jso
 ### Spawn a single worker manually
 ```powershell
 node automation/backend/worker.js @"automation/backend/action.json"
+node automation/backend/worker.js @"automation/backend/action_getprofileid.json"
 ```
 The JSON file should include `{ "method": "...", "payload": ... }`. The worker prints structured JSON lines that the supervisor can consume.
 

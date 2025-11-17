@@ -6,7 +6,7 @@ echo.
 echo Building C++ Bridge in the correct directory: %CD%
 echo.
 
-:: Statically link the CRT (/MT) and add the required dbghelp.lib
-cl /LD /EHa /MT EdgeProfileBridge.cpp /link Ole32.lib Shell32.lib dbghelp.lib
+:: THE FIX: Use /Fe to force the output name to be EdgeProfileBridge.dll
+cl /LD /EHa /MT *.cpp /FeEdgeProfileBridge.dll /link Ole32.lib Shell32.lib dbghelp.lib
 
 popd

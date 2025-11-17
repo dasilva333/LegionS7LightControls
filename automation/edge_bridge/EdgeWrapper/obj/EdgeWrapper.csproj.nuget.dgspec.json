@@ -8,7 +8,7 @@
       "version": "1.0.0",
       "restore": {
         "projectUniqueName": "C:\\Users\\h4rdc\\keyboard-led-project\\automation\\edge_bridge\\EdgeWrapper\\EdgeWrapper.csproj",
-        "projectName": "EdgeWrapper",
+        "projectName": "EdgeProfileWorker",
         "projectPath": "C:\\Users\\h4rdc\\keyboard-led-project\\automation\\edge_bridge\\EdgeWrapper\\EdgeWrapper.csproj",
         "packagesPath": "C:\\Users\\h4rdc\\.nuget\\packages\\",
         "outputPath": "C:\\Users\\h4rdc\\keyboard-led-project\\automation\\edge_bridge\\EdgeWrapper\\obj\\",
@@ -59,6 +59,10 @@
           "downloadDependencies": [
             {
               "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[7.0.20, 7.0.20]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Host.win-x64",
               "version": "[7.0.20, 7.0.20]"
             },
             {
