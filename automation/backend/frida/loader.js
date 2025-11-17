@@ -11,10 +11,31 @@ const AGENT_ACTIONS_PATH = path.join(__dirname, 'actions');
 let agentApi = null;
 let isFridaReady = false;
 let messageQueue = []; // Queue for commands that arrive before Frida is ready.
+const GOLDEN_BUFFER_PATH = path.join(__dirname, 'golden_details.bin'); // Path to the golden buffer
 
 function buildAgentScript() {
-    console.log('[FridaLoader] Building agent script...');
+    console.log('[FridaLoader] Building agent script from source files...');
+
     let script = fs.readFileSync(AGENT_CORE_PATH, 'utf8');
+    
+    // --- START: New Buffer Injection Logic ---
+    if (fs.existsSync(GOLDEN_BUFFER_PATH)) {
+        console.log(`[FridaLoader] Found golden buffer at: ${GOLDEN_BUFFER_PATH}`);
+        const buffer = fs.readFileSync(GOLDEN_BUFFER_PATH);
+        // Convert the Buffer object to a simple array of numbers, then join to a string.
+        const bufferString = Array.from(buffer).join(',');
+        
+        // Replace the placeholder in the agent-core template.
+        script = script.replace('// __GOLDEN_DETAILS_BUFFER__', bufferString);
+        console.log(`[FridaLoader] Injected ${buffer.length} bytes from golden buffer into agent script.`);
+    } else {
+        console.warn(`[FridaLoader] WARNING: Golden buffer not found at ${GOLDEN_BUFFER_PATH}. Dispatcher may crash.`);
+        // If the file isn't there, we replace the placeholder with nothing, resulting in an empty array.
+        script = script.replace('// __GOLDEN_DETAILS_BUFFER__', '');
+    }
+    // --- END: New Buffer Injection Logic ---
+
+    // Inject actions
     try {
         const actionFiles = fs.readdirSync(AGENT_ACTIONS_PATH).filter(f => f.endsWith('.js'));
         console.log(`[FridaLoader] Found ${actionFiles.length} actions to bundle.`);

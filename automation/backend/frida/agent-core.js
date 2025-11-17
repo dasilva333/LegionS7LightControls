@@ -63,12 +63,19 @@ const context = {
     nativeFunctions: {},
     hwObjectPtr: null,
     log: log,
-    // Add the helper to the context so all actions can access it.
+    goldenBuffers: {
+        details: null // This will be populated by the loader
+    },
     utils: {
         readStdString: readStdString,
         createStdString: createStdString
     }
 };
+
+// This special comment will be replaced by the loader.js script during bundling.
+context.goldenBuffers.details = new Uint8Array([
+    // __GOLDEN_DETAILS_BUFFER__
+]);
 
 /**
  * A central function to define and create a Frida NativeFunction.
