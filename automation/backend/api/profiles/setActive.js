@@ -1,20 +1,23 @@
-const { callWorker } = require("../helpers/workerCaller");
+const { sendCommand } = require('../../frida/proxy');
 
 module.exports = {
   method: "post",
-  route: "/set-active-profile/:id",
+  route: "/profiles/active/:id",
   handler: async (req, res) => {
-    const param = req.params.id;
-    const id = parseInt(param, 10);
-    if (Number.isNaN(id)) {
-      return res.status(400).json({ error: "invalid profile id" });
-    }
     try {
-      await callWorker("SetProfileIndex", id, 10000);
-      res.json({ success: true, profileId: id });
+      const profileId = parseInt(req.params.id, 10);
+      if (isNaN(profileId)) {
+        return res.status(400).json({ success: false, error: "Profile ID must be an integer." });
+      }
+
+      // The command 'setProfileIndex' matches the name in the new action file.
+      // The payload is an object, as expected by the action.
+      const result = await sendCommand("setProfileIndex", { profileId: profileId });
+      
+      res.json({ success: true, ...result });
     } catch (err) {
-      console.error("POST /set-active-profile failed", err);
-      res.status(500).json({ error: "failed to set active profile" });
+      console.error(`[API /profiles/active/:id] Error: ${err.message}`);
+      res.status(500).json({ success: false, error: err.message });
     }
   }
 };

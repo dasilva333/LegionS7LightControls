@@ -1,5 +1,7 @@
 frida -n "LenovoVantage-(LenovoGamingUserAddin).exe" -l C:\Users\h4rdc\keyboard-led-project\frida\hook_lighting.js
 
+frida -n "LenovoVantage-(LenovoGamingUserAddin).exe" -l C:\Users\h4rdc\keyboard-led-project\frida\hook_lightning_v2.js
+
 and this works too:
 
 frida -n "LenovoVantage-(LenovoGamingUserAddin).exe" -l C:\Users\h4rdc\keyboard-led-project\frida\frida_agent.js

@@ -1,15 +1,18 @@
-const { callWorker } = require("../helpers/workerCaller");
+// This handler requires the sendCommand function from our central proxy.
+const { sendCommand } = require('../../frida/proxy');
 
 module.exports = {
   method: "get",
-  route: "/active-profile/id",
-  handler: async (_req, res) => {
+  route: "/profiles/active-id",
+  handler: async (req, res) => {
     try {
-      const profileId = await callWorker("GetActiveProfileId");
-      res.json({ profileId });
+      // The command name 'getActiveProfileId' must match the 'name' property
+      // in the corresponding action file.
+      const profileId = await sendCommand("getActiveProfileId");
+      res.json({ success: true, profileId });
     } catch (err) {
-      console.error("GET /active-profile/id failed", err);
-      res.status(500).json({ error: "failed to read active profile id" });
+      console.error(`[API /profiles/active-id] Error: ${err.message}`);
+      res.status(500).json({ success: false, error: err.message });
     }
   }
 };
