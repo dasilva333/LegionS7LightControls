@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Add these two lines to create an .exe -->
+    <OutputType>Exe</OutputType>
+    <StartupObject>SwitchProfileWrapper.Worker</StartupObject>
+
+    <TargetFramework>net7.0</TargetFramework>
+    <RootNamespace>SwitchProfileWrapper</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\SwitchProfileBridge\SwitchProfileBridge.dll">
+      <Link>SwitchProfileBridge.dll</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

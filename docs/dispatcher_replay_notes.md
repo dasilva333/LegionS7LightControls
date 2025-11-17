@@ -1,3 +1,8 @@
+./activate_frida_env.bat
+
+frida -n "LenovoVantage-(LenovoGamingUserAddin).exe" -l C:\Users\h4rdc\keyboard-led-project\hook_lighting.js
+
+
 # Dispatcher Replay Notes
 
 This note captures the minimum data we must collect (and subsequently replay) to drive Lenovo's `Gaming.AdvancedLighting.dll` safely outside Lenovo Vantage.

@@ -1,0 +1,11 @@
+C:\Users\h4rdc\keyboard-led-project\automation\edge_bridge\EdgeWrapper\bin\x64\Debug\net7.0\EdgeProfileBridge.dll
+C:\Users\h4rdc\keyboard-led-project\automation\edge_bridge\EdgeWrapper\bin\x64\Debug\net7.0\EdgeWrapper.deps.json
+C:\Users\h4rdc\keyboard-led-project\automation\edge_bridge\EdgeWrapper\bin\x64\Debug\net7.0\EdgeWrapper.dll
+C:\Users\h4rdc\keyboard-led-project\automation\edge_bridge\EdgeWrapper\bin\x64\Debug\net7.0\EdgeWrapper.pdb
+C:\Users\h4rdc\keyboard-led-project\automation\edge_bridge\EdgeWrapper\obj\x64\Debug\net7.0\EdgeWrapper.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\h4rdc\keyboard-led-project\automation\edge_bridge\EdgeWrapper\obj\x64\Debug\net7.0\EdgeWrapper.csproj.CoreCompileInputs.cache
+C:\Users\h4rdc\keyboard-led-project\automation\edge_bridge\EdgeWrapper\obj\x64\Debug\net7.0\EdgeWrapper.sourcelink.json
+C:\Users\h4rdc\keyboard-led-project\automation\edge_bridge\EdgeWrapper\obj\x64\Debug\net7.0\EdgeWrapper.dll
+C:\Users\h4rdc\keyboard-led-project\automation\edge_bridge\EdgeWrapper\obj\x64\Debug\net7.0\refint\EdgeWrapper.dll
+C:\Users\h4rdc\keyboard-led-project\automation\edge_bridge\EdgeWrapper\obj\x64\Debug\net7.0\EdgeWrapper.pdb
+C:\Users\h4rdc\keyboard-led-project\automation\edge_bridge\EdgeWrapper\obj\x64\Debug\net7.0\ref\EdgeWrapper.dll

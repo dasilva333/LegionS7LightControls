@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using System.Text.Json;
 
 namespace EdgeWrapper
 {
@@ -23,7 +25,7 @@ namespace EdgeWrapper
 
         [DllImport(BridgeDll, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
         [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool SendRawTrafficRaw(string commandJson);
+        private static extern bool SendRawTrafficRaw(string commandJson, string payloadJson);
 
         [DllImport(BridgeDll, CallingConvention = CallingConvention.Cdecl)]
         private static extern int SetProfileIndexRaw(int profileId);
@@ -69,8 +71,39 @@ namespace EdgeWrapper
         public async Task<object> SendRawTraffic(object input)
         {
             if (input == null) throw new ArgumentNullException(nameof(input));
-            string packet = input as string ?? input.ToString();
-            bool result = SendRawTrafficRaw(packet);
+            string commandJson = null;
+            string payloadJson = null;
+
+            if (input is IDictionary<string, object> dict)
+            {
+                if (dict.TryGetValue("command", out var cmd)) commandJson = cmd?.ToString();
+                if (dict.TryGetValue("payload", out var payload)) payloadJson = payload?.ToString();
+            }
+            else
+            {
+                commandJson = input as string ?? input.ToString();
+            }
+
+            // This block replaces the old JavaScriptSerializer logic
+            if (string.IsNullOrWhiteSpace(payloadJson) && !string.IsNullOrWhiteSpace(commandJson))
+            {
+                try
+                {
+                    // Use the modern System.Text.Json parser
+                    JsonDocument doc = JsonDocument.Parse(commandJson);
+                    if (doc.RootElement.TryGetProperty("payload", out JsonElement payloadElement))
+                    {
+                        // The payload property is a string, so get its string value
+                        payloadJson = payloadElement.GetString();
+                    }
+                }
+                catch (JsonException)
+                {
+                    // ignore parsing issues, same as before
+                }
+            }
+
+            bool result = SendRawTrafficRaw(commandJson, payloadJson);
             if (!result) throw new InvalidOperationException("SendRawTrafficRaw failed");
             return await Task.FromResult<object>(true);
         }

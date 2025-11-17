@@ -1,12 +1,17 @@
+process.env.EDGE_USE_CORECLR = '1'; // <--- ADD THIS LINE
+
 const edge = require("edge-js");
 const path = require("path");
 const fs = require("fs");
 
-const assemblyPath = path.join(__dirname, "..", "edge_bridge", "EdgeWrapper", "bin", "Debug", "net48", "EdgeWrapper.dll");
+const assemblyPath = path.join(__dirname, "..", "edge_bridge", "EdgeWrapper", "bin", "x64", "Debug", "net7.0", "EdgeWrapper.dll");
 if (!fs.existsSync(assemblyPath)) {
   console.error("EdgeWrapper assembly missing at", assemblyPath);
   process.exit(1);
 }
+
+const edgeDir = path.dirname(assemblyPath);
+process.env.PATH = `${edgeDir};${process.env.PATH}`;
 
 const methods = {
   GetActiveProfileId: edge.func({ assemblyFile: assemblyPath, typeName: "EdgeWrapper.ProfileService", methodName: "GetActiveProfileId" }),
@@ -65,6 +70,15 @@ async function main() {
   if (action.profileId !== undefined) payload = action.profileId;
 
   console.log(`[Worker] Invoking ${method}`);
+  if (payload !== undefined && method !== "ShutdownBridge") {
+    const shortPayload = typeof payload === "string" && payload.length > 512
+      ? `${payload.slice(0, 512)}...`
+      : payload;
+    console.log(`[Worker] Payload preview (${method}):`, shortPayload);
+    if (typeof payload === "string" && payload.length > 512) {
+      console.log(`[Worker] Full payload length: ${payload.length} bytes`);
+    }
+  }
 
   let exitCode = 0;
   try {

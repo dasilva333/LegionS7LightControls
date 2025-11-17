@@ -1,0 +1,14 @@
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileWrapper\bin\x64\Debug\net7.0\SwitchProfileBridge.dll
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileWrapper\bin\x64\Debug\net7.0\SwitchProfileWrapper.deps.json
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileWrapper\bin\x64\Debug\net7.0\SwitchProfileWrapper.dll
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileWrapper\bin\x64\Debug\net7.0\SwitchProfileWrapper.pdb
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileWrapper\obj\x64\Debug\net7.0\SwitchProfileWrapper.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileWrapper\obj\x64\Debug\net7.0\SwitchProfileWrapper.csproj.CoreCompileInputs.cache
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileWrapper\obj\x64\Debug\net7.0\SwitchProfileWrapper.sourcelink.json
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileWrapper\obj\x64\Debug\net7.0\SwitchProfileWrapper.dll
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileWrapper\obj\x64\Debug\net7.0\refint\SwitchProfileWrapper.dll
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileWrapper\obj\x64\Debug\net7.0\SwitchProfileWrapper.pdb
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileWrapper\obj\x64\Debug\net7.0\ref\SwitchProfileWrapper.dll
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileWrapper\bin\x64\Debug\net7.0\SwitchProfileWrapper.exe
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileWrapper\bin\x64\Debug\net7.0\SwitchProfileWrapper.runtimeconfig.json
+C:\Users\h4rdc\keyboard-led-project\SwitchProfilesByFilename\SwitchProfileWrapper\obj\x64\Debug\net7.0\SwitchProfileWrapper.genruntimeconfig.cache

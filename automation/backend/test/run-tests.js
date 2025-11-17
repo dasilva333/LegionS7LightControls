@@ -55,8 +55,15 @@ const actions = [
   { method: "GetProfileJson" },
   { method: "SetProfileIndex", profileId: 1 },
   { method: "SetProfileDetails", payload: loadPayloadFixture() },
-  { method: "SendRawTraffic", payload: loadCommandFixture() }
-];
+  (() => {
+    const command = loadCommandFixture();
+    const payload = loadPayloadFixture();
+    if (!command || !payload) {
+      return null;
+    }
+    return { method: "SendRawTraffic", payload: { command, payload } };
+  })()
+].filter(Boolean);
 
 async function run() {
   log("Starting backend native helper tests");

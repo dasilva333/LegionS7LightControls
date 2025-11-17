@@ -1,0 +1,11 @@
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetProfileDetailsWrapper\bin\x64\Debug\net7.0\SetDetailsBridge.dll
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetProfileDetailsWrapper\bin\x64\Debug\net7.0\SetProfileDetailsWrapper.deps.json
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetProfileDetailsWrapper\bin\x64\Debug\net7.0\SetProfileDetailsWrapper.dll
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetProfileDetailsWrapper\bin\x64\Debug\net7.0\SetProfileDetailsWrapper.pdb
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetProfileDetailsWrapper\obj\x64\Debug\net7.0\SetProfileDetailsWrapper.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetProfileDetailsWrapper\obj\x64\Debug\net7.0\SetProfileDetailsWrapper.csproj.CoreCompileInputs.cache
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetProfileDetailsWrapper\obj\x64\Debug\net7.0\SetProfileDetailsWrapper.sourcelink.json
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetProfileDetailsWrapper\obj\x64\Debug\net7.0\SetProfileDetailsWrapper.dll
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetProfileDetailsWrapper\obj\x64\Debug\net7.0\refint\SetProfileDetailsWrapper.dll
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetProfileDetailsWrapper\obj\x64\Debug\net7.0\SetProfileDetailsWrapper.pdb
+C:\Users\h4rdc\keyboard-led-project\SetProfileDetailsController\SetProfileDetailsWrapper\obj\x64\Debug\net7.0\ref\SetProfileDetailsWrapper.dll

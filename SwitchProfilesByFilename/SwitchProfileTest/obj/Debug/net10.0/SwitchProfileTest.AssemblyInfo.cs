@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SwitchProfileTest")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+de57dd7dc2d750602217d3819bca4b8c17c5c4eb")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bd5dfd3cdf7661d7f05e9d10222de8e3be141876")]
 [assembly: System.Reflection.AssemblyProductAttribute("SwitchProfileTest")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SwitchProfileTest")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <RootNamespace>SetProfileDetailsWrapper</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <!-- This is the critical part: It finds the WORKING bridge DLL and copies it -->
+  <ItemGroup>
+    <None Include="..\SetDetailsBridge\SetDetailsBridge.dll">
+      <Link>SetDetailsBridge.dll</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

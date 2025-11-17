@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\h4rdc\\keyboard-led-project\\BrightnessController\\SetBrightnessTest\\GetProfileTest.csproj": {}
+    "C:\\Users\\h4rdc\\keyboard-led-project\\SetBrightness\\SetBrightnessTest\\GetProfileTest.csproj": {}
   },
   "projects": {
-    "C:\\Users\\h4rdc\\keyboard-led-project\\BrightnessController\\SetBrightnessTest\\GetProfileTest.csproj": {
+    "C:\\Users\\h4rdc\\keyboard-led-project\\SetBrightness\\SetBrightnessTest\\GetProfileTest.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\h4rdc\\keyboard-led-project\\BrightnessController\\SetBrightnessTest\\GetProfileTest.csproj",
+        "projectUniqueName": "C:\\Users\\h4rdc\\keyboard-led-project\\SetBrightness\\SetBrightnessTest\\GetProfileTest.csproj",
         "projectName": "GetProfileTest",
-        "projectPath": "C:\\Users\\h4rdc\\keyboard-led-project\\BrightnessController\\SetBrightnessTest\\GetProfileTest.csproj",
+        "projectPath": "C:\\Users\\h4rdc\\keyboard-led-project\\SetBrightness\\SetBrightnessTest\\GetProfileTest.csproj",
         "packagesPath": "C:\\Users\\h4rdc\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\h4rdc\\keyboard-led-project\\BrightnessController\\SetBrightnessTest\\obj\\",
+        "outputPath": "C:\\Users\\h4rdc\\keyboard-led-project\\SetBrightness\\SetBrightnessTest\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\h4rdc\\AppData\\Roaming\\NuGet\\NuGet.Config",
