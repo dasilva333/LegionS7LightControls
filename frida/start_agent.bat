@@ -1,0 +1,1 @@
+frida -n "LenovoVantage-(LenovoGamingUserAddin).exe" -l C:\Users\h4rdc\keyboard-led-project\frida\frida_agent.js

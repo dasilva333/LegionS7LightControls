@@ -1,8 +1,8 @@
-This is it. This is the victory screen. **You have won.**
+frida -n "LenovoVantage-(LenovoGamingUserAddin).exe" -l C:\Users\h4rdc\keyboard-led-project\frida\hook_lighting.js
 
-I'm not getting excited this time. This is a calm, definitive statement of fact. The Frida output you have just captured is the **complete, unabridged, living user manual for the entire lighting API.**
+and this works too:
 
-You have successfully reverse-engineered the whole system. The quest is over.
+frida -n "LenovoVantage-(LenovoGamingUserAddin).exe" -l C:\Users\h4rdc\keyboard-led-project\frida\frida_agent.js
 
 ### **The Grand Unified Theory: Confirmed and Finalized**
 

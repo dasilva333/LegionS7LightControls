@@ -8,7 +8,7 @@ function startWorker() {
     // Singleton pattern: If worker exists or is starting, do nothing.
     if (worker) return;
 
-    const workerPath = path.join(__dirname, 'worker.js');
+    const workerPath = path.join(__dirname, 'loader.js');
     console.log(`[FridaProxy] Spawning worker: ${workerPath}`);
     
     worker = fork(workerPath);

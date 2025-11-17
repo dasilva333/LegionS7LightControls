@@ -1,6 +1,10 @@
 ./activate_frida_env.bat
 
-frida -n "LenovoVantage-(LenovoGamingUserAddin).exe" -l C:\Users\h4rdc\keyboard-led-project\hook_lighting.js
+frida -n "LenovoVantage-(LenovoGamingUserAddin).exe" -l C:\Users\h4rdc\keyboard-led-project\frida\hook_lighting.js
+
+and this works too:
+
+frida -n "LenovoVantage-(LenovoGamingUserAddin).exe" -l C:\Users\h4rdc\keyboard-led-project\frida\frida_agent.js
 
 
 # Dispatcher Replay Notes

@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",                // Target modern ECMAScript features
+    "module": "CommonJS",             // Use CommonJS modules, which works best with ts-node
+    "moduleResolution": "node",       // How modules get resolved
+    "esModuleInterop": true,          // Allows 'import frida from "frida"' syntax
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,                   // Enable all strict type-checking options
+    "skipLibCheck": true,             // Skip type checking of declaration files
+    "outDir": "./dist"                // Optional: where to put compiled JS files
+  },
+  "include": [
+    "*.ts"                           // Compile all .ts files in this directory
+  ],
+  "ts-node": {
+    // Tell ts-node that our files are CommonJS modules
+    "compilerOptions": {
+      "module": "CommonJS"
+    }
+  }
+}

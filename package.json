@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "edge-js": "^25.0.0"
+    "edge-js": "^25.0.0",
+    "frida": "^17.5.1"
   }
 }
