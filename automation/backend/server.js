@@ -5,6 +5,12 @@ const path = require("path");
 const app = express();
 app.use(express.json());
 
+// --- THE ONLY ADDITION ---
+// Initialize the Frida proxy, which will spawn the worker process in the background.
+console.log('[Server] Initializing Frida proxy...');
+require('./frida/proxy.js');
+// -------------------------
+
 const apiDir = path.join(__dirname, "api");
 
 function registerRoutes(directory) {
@@ -18,12 +24,12 @@ function registerRoutes(directory) {
     try {
       const routeModule = require(fullPath);
       if (!routeModule || !routeModule.method || !routeModule.route || typeof routeModule.handler !== "function") {
-        console.warn(`Skipping ${fullPath}: missing exposed {method, route, handler}`);
+        console.warn(`[API] Skipping ${fullPath}: missing contract {method, route, handler}`);
         return;
       }
       const method = routeModule.method.toLowerCase();
       if (typeof app[method] !== "function") {
-        console.warn(`Skipping ${fullPath}: Express does not support method ${routeModule.method}`);
+        console.warn(`[API] Skipping ${fullPath}: Express does not support method ${routeModule.method}`);
         return;
       }
       app[method](routeModule.route, routeModule.handler);
