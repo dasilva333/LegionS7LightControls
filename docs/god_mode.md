@@ -821,3 +821,449 @@ Your primary task is to trace the **origin and composition** of the data that ul
 
 **Final Output:**
 Provide the C-style `struct` or class definition for the `param_1` object and any data structures it points to, particularly the one at offset `+0x08`. This will give us the schema needed to construct the input for `FUN_180037990` and achieve full "God Mode" control.
+
+
+This is a fascinating project. Reading through the logs, I am completely caught up. You are incredibly close.
+
+Here is the brutally honest assessment of where we stand, why the "dumping" method hit a wall, and the specific technical pivot required to cross the finish line.
+
+### 1. Where We Stand
+We have successfully reverse-engineered the **State Machine** and the **Output Mechanism**, but we are missing the **Input Format**.
+
+*   **✅ The State Machine:** We know how to take control (`ACQUIRE` at `0x14630`) and release it (`RELEASE` at `0x14cb0`).
+*   **✅ The Output Mechanism:** We found the function that "builds the frame" (`FrameBuilder` at `0x37990`) and the primitive that sends it to USB (`Primitive` at `0x209B0`).
+*   **✅ The Buffer Location:** We know `FrameBuilder` keeps a pointer to the final 960-byte output buffer at `this + 0x10`.
+*   **❌ The Missing Link:** We do not know where `FrameBuilder` *gets* the RGB data from to fill that buffer.
+
+**The "Dead End" explained:**
+The previous analysis hit a wall because we assumed the input data was passed as a clean pointer inside the `param_1` object (specifically at `+0x08`). The dumps proved this wrong—that pointer was static. This means the `FrameBuilder` is likely a C++ object that calculates effects procedurally (or reads from a global state), rather than just passing a bucket of bytes.
+
+### 2. What We Should Actually Do Next
+We need to stop looking at the **memory** (the dumps) and start looking at the **logic** (the instructions).
+
+We need to answer one specific question: **Inside `FUN_180037990`, what instruction writes data into the buffer at `this + 0x10`?**
+
+If we find the line of code that writes `Red = 255` into the buffer, we can look at where that `255` came from.
+
+#### The Strategy: "Reverse Data Flow"
+We have two ways to do this. Pick the one that suits your workflow best (Ghidra is cleaner, Frida is "live").
+
+#### Path A: Static Analysis (Ghidra) - *The Preferred Path*
+We need to open `FUN_180037990` and trace the buffer pointer backwards.
+
+1.  **Locate the Write:** In the decompilation, find the loop where it accesses `*(this + 0x10)`. It will look something like `buffer[i] = ...`.
+2.  **Identify the Source:** Look at the right side of that assignment.
+    *   Is it reading from another array? (e.g., `other_buffer[i]`)
+    *   Is it calling a function? (e.g., `getKeyColor(i)`)
+    *   Is it doing math? (e.g., `i * time_variable`)
+3.  **The Answer:** If it reads from `other_buffer`, **that** is the offset we missed. If it calls `getKeyColor`, we hook that function instead.
+
+#### Path B: Dynamic Analysis (Frida Stalker) - *The brute force path*
+If Ghidra is confusing, we use Frida's `Stalker` to trace the CPU registers *while* the function runs.
+
+We write a script that says:
+1.  Hook `0x37990`.
+2.  Monitor every instruction.
+3.  **Trigger:** When an instruction writes to the memory range of the 960-byte buffer...
+4.  **Capture:** Tell me which Register held the data source.
+
+### 3. What This Will Answer
+This step solves the "Input Schema" problem.
+
+Right now, we are trying to call the function like this:
+`FrameBuilder(my_fake_object)`
+But we don't know how to build `my_fake_object`.
+
+By tracing the data flow, we will find one of two things:
+
+1.  **The Hidden Buffer:** We discover the RGB data is actually stored at `this + 0x20` or in a global variable we missed. We can then write to that location and let the native `FrameBuilder` do the rest.
+2.  **The "Set Color" Function:** We find that `FrameBuilder` calls a helper like `GetColor(KeyID)`. We can then ignore `FrameBuilder` entirely and just call the `SetColor` function directly, which is the true "God Mode" primitive.
+
+### Recommendation
+**Do Path A (Ghidra) first.** It is faster than writing complex Stalker scripts.
+
+**Here is the instruction for your Static Analysis tool (or for you to look at):**
+
+> "Go to RVA `0x37990`. Find the pointer to the 960-byte buffer (accessed via `param_1 + 0x10`). Find the loop that writes into this buffer. Identify the **Source Operand** of those write instructions. Is the source coming from another member variable of `param_1`, or is it the result of a calculation?"
+
+If you paste the decompiled code of `FUN_180037990` here, I can do that analysis for you instantly.
+
+This is the breakthrough we needed. The code you pasted explains **exactly** why we hit a wall, and it tells us exactly where to go next.
+
+### The Revelation: It's Just a "Mailman"
+
+Look at the code you pasted for `FUN_180037990`:
+
+```c
+puVar4 = (undefined8 *)
+         FUN_1800209b0(..., ..., *(longlong **)(param_1 + 0x10));
+```
+
+Do you see any loops? Do you see any math? Do you see any RGB calculations?
+**No.**
+
+**Conclusion:** `FUN_180037990` is **not** the "Frame Builder." It is the **"Frame Flusher."**
+
+Its only job is to take the pointer to the buffer (stored at `param_1 + 0x10`) and pass it to the USB primitive (`FUN_1800209b0`) to send it to the hardware.
+
+**This is why your dumps were static.** The function doesn't change the data; it just ships it. The *actual* modification of the colors happens somewhere else, likely moments before this function is called.
+
+---
+
+### 1. Solving your Ghidra Issue (The Navigation)
+
+To navigate to this address in Ghidra, you must add the "Image Base." For 64-bit programs, Ghidra usually sets this to `0x180000000`.
+
+*   Target RVA: `0x37990`
+*   Image Base: `0x180000000`
+*   **Address to type in Ghidra:** **`180037990`**
+
+(Type `G`, then paste `180037990`, then Enter).
+
+---
+
+### 2. The New Plan: "The Paint Watcher"
+
+We are now looking for the **"Painter"** function. This is the code that actually writes RGB values into that 960-byte buffer.
+
+Since we know *where* the buffer is (we can find it by reading `param_1 + 0x10` inside the Flusher), we can set a **Hardware Trap** on that memory.
+
+We will tell Frida: "Watch this 960-byte buffer. The millisecond ANY instruction tries to write a byte to it, freeze execution and tell me **who did it**."
+
+That "who" is our God Mode function.
+
+### 3. The Script: `find_the_painter.js`
+
+Here is the script. It hooks the Flusher to find the buffer address, then immediately sets a watch on that buffer.
+
+```javascript
+'use strict';
+
+const TARGET_MODULE = 'Gaming.AdvancedLighting.dll';
+const RVA_FLUSHER = 0x37990; // The function you just decompiled
+const BUFFER_OFFSET = 0x10;  // From your decompilation: *(param_1 + 0x10)
+const BUFFER_SIZE = 960;
+
+let isWatching = false;
+
+function main() {
+    const module = Process.getModuleByName(TARGET_MODULE);
+    if (!module) {
+        console.log('Waiting for DLL...');
+        setTimeout(main, 1000);
+        return;
+    }
+
+    const flusherAddr = module.base.add(RVA_FLUSHER);
+    console.log(`[+] Hooking Flusher at ${flusherAddr}`);
+
+    Interceptor.attach(flusherAddr, {
+        onEnter(args) {
+            if (isWatching) return;
+
+            // 1. Get the "this" pointer (param_1)
+            const thisPtr = args[0];
+
+            // 2. Read the pointer to the buffer (param_1 + 0x10)
+            const bufferPtr = thisPtr.add(BUFFER_OFFSET).readPointer();
+            
+            if (bufferPtr.isNull()) return;
+
+            console.log(`[!] Found Buffer at: ${bufferPtr}`);
+            console.log(`[+] Setting Memory Watcher on ${BUFFER_SIZE} bytes...`);
+
+            // 3. Set the Trap using MemoryAccessMonitor
+            isWatching = true;
+            
+            MemoryAccessMonitor.enable({
+                base: bufferPtr,
+                size: BUFFER_SIZE
+            }, {
+                onAccess: function (details) {
+                    if (details.operation === 'write') {
+                        console.log(`\n[!!!] CAUGHT THE PAINTER!`);
+                        console.log(`      Writing to index: ${details.offset}`);
+                        console.log(`      Instruction Address (PC): ${details.from}`);
+                        
+                        // Calculate the RVA of the painter function
+                        const rva = details.from.sub(module.base);
+                        console.log(`      RVA of Painter: 0x${rva.toString(16)}`);
+                        
+                        // Stop watching immediately so we don't crash the app
+                        MemoryAccessMonitor.disable();
+                    }
+                }
+            });
+        }
+    });
+}
+
+setImmediate(main);
+```
+
+### Instructions
+
+1.  Save this as `find_the_painter.js`.
+2.  Run it: `frida -n "LenovoVantage-(LenovoGamingUserAddin).exe" -l find_the_painter.js` (or whatever your process name is).
+3.  **Trigger an effect:** Turn on Aurora Sync or switch a profile.
+4.  **Look at the Output:**
+    *   It will print **`RVA of Painter: 0x...`**.
+
+**That RVA is the answer.**
+
+Once you give me that RVA, we can go to that address in Ghidra (add `180000000` to it), and we will see the logic that turns "Key ID + Color" into bytes. **That** is the function we need to call for God Mode.
+
+
+This is a classic "Sherlock Holmes" moment. The dog didn't bark.
+
+**The Fact:** You saw the keyboard colors change, but the "Memory Watcher" didn't fire.
+**The Deduction:** The painting was already finished *before* we started watching.
+
+Here is exactly what is happening:
+1.  **The "Painter" Function runs:** It calculates the colors and writes them to the buffer. (The Trap isn't set yet).
+2.  **The "Flusher" Function (`0x37990`) is called:** We hook this function. We set the trap.
+3.  **The "Primitive" Function runs:** It *reads* the buffer to send it to USB. (This doesn't trigger a *write* trap).
+4.  **We wait:** But the paint is already dry.
+
+### The Solution: "Who's the Boss?"
+We need to find the **Manager Function** (the Orchestrator).
+The Manager looks like this:
+```c
+void ManagerLoop() {
+    Painter(); // <--- Writes to the buffer (We need to find this!)
+    Flusher(); // <--- We are here (Too late!)
+}
+```
+
+We need to find out who is calling the Flusher. Once we find the Manager, we look at the line of code *right before* the Flusher call. That will be our Painter.
+
+### Step 1: Get the Address of the Manager
+We will use a tiny Frida script to print the "Call Stack" (the trail of breadcrumbs leading to our current function).
+
+Save this as `trace_the_manager.js`:
+
+```javascript
+'use strict';
+
+const TARGET_MODULE = 'Gaming.AdvancedLighting.dll';
+const RVA_FLUSHER = 0x37990; 
+
+function main() {
+    const module = Process.getModuleByName(TARGET_MODULE);
+    if (!module) {
+        setTimeout(main, 1000);
+        return;
+    }
+
+    const flusherAddr = module.base.add(RVA_FLUSHER);
+    console.log(`[+] Hooking Flusher at ${flusherAddr}`);
+
+    Interceptor.attach(flusherAddr, {
+        onEnter(args) {
+            console.log('\n[+] Flusher Called! Tracing back to the Manager...');
+            
+            // This prints the hierarchy of functions that called us
+            console.log(
+                Thread.backtrace(this.context, Backtracer.ACCURATE)
+                .map(DebugSymbol.fromAddress)
+                .join('\n')
+            );
+
+            // We only need one trace
+            Interceptor.detachAll();
+        }
+    });
+}
+
+setImmediate(main);
+```
+
+### Step 2: Run it
+1.  Run: `frida -n "LenovoVantage-(LenovoGamingUserAddin).exe" -l trace_the_manager.js`
+2.  Trigger the effect (Screen Sync).
+
+### Step 3: Analyze the Output
+You will see a list of addresses like this:
+```
+0x7ff... (Gaming.AdvancedLighting.dll!...)
+0x7ff... (Gaming.AdvancedLighting.dll!...) <--- The Manager is usually the first one or two items below the top.
+```
+
+**Copy and paste that output here.**
+I will calculate the RVA of the Manager, and then we will go to that address in Ghidra. We will see the "Painter" sitting right next to the "Flusher" call.
+
+
+This is exceptional work. You have provided the map, the compass, and the destination.
+
+The documentation you provided confirms the exact structure of the application, and the decompiled code of `SyncKbdColorThread` (`FUN_180010850`) aligns perfectly with it.
+
+### The Smoking Gun: `FUN_180010af0`
+
+Look at the main loop inside `FUN_180010850`:
+
+```c
+do {
+    // 1. Check if Gate is Open
+    if (*(char *)(param_1 + 0x160) == '\0') { ... wait ... }
+
+    // 2. Lock the Object (Thread Safety)
+    _Mtx_lock(param_1);
+    
+    // 3. Do some mysterious screen capture work?
+    puVar4 = FUN_180038850();
+    FUN_18003a070((longlong)puVar4,pcVar7,puVar8,param_4);
+    
+    // 4. Unlock
+    _Mtx_unlock(param_1);
+
+    // 5. THE PAYLOAD
+    FUN_180010af0(param_1);  // <--- THIS IS THE TARGET
+
+    // 6. Sleep (Frame Limiter)
+    FUN_18000abc0(plVar6);
+
+} while (*(char *)(param_1 + 0x150) == '\0');
+```
+
+**The Deduction:**
+1.  The function **`FUN_180010af0`** is called exactly once per frame.
+2.  It is called *outside* the critical section (after unlock), which implies it is the **Output/Dispatch** step.
+3.  It takes `param_1` (the main Hardware Manager object) as its argument.
+4.  Your own `command_map` notes say: *"Periodically calls FUN_180010af0 (color push)"*.
+
+**Hypothesis:**
+`FUN_180010af0` is the bridge. It looks at the data gathered in step 3 (screen capture), formats it, and hands it to the `FrameBuilder` (`0x37990`) or calls the primitive directly.
+
+### The Next Move: Open the Bridge
+
+We need to look inside **`FUN_180010af0`**.
+
+1.  Go to Ghidra.
+2.  Press **`G`**.
+3.  Type: **`180010af0`** (RVA `0x10AF0`).
+4.  **Paste the code here.**
+
+**What to look for:**
+I expect to see a call to our old friend `FUN_180037990` (The Flusher/FrameBuilder) inside this function.
+Crucially, I expect to see logic *before* that call that accesses an array or a buffer. **That array is the Input Schema.**
+
+
+
+This is a massive win. The `Imports` list (confirming **D3D11.DLL** and **HID.DLL**) and the decompiled code for `FUN_18003a070` tell us the entire story.
+
+You have found the "Screen Sync" engine, and it works exactly as we suspected.
+
+### The Mechanics of "Screen Sync"
+
+1.  **The Setup:** `SyncKbdColorThread` calls `FUN_18003a070`.
+2.  **The Buffer:** `FUN_18003a070` allocates a **960-byte stack buffer** (`local_3d8`).
+3.  **The Header:** It manually sets the first few bytes: `07 03 ...`. This matches the HID Report header.
+4.  **The "Eye" (Capture):** It calls **`FUN_1800298c0`**.
+    *   `FUN_18001e030("func%s \r\n","GetKeyBoardColor",...)` logs this operation.
+    *   This function (`0x298c0`) likely uses **D3D11.DLL** to grab the screen pixels and fills the buffer with the 960-byte HID packet.
+5.  **The Mirror:** The rest of `FUN_18003a070` loops through that 960-byte buffer and *copies* the colors into the `param_1` object (`*(param_1 + 0x88)`). This updates the DLL's internal state to match what it just captured.
+
+### Why the "Painter" Trap Failed
+The "Painter" script was watching the memory used by the **Flusher** (`0x37990`), which is used for *software animations* (Wave, Ripple).
+**Screen Sync** uses a completely different path. It builds the packet on the **stack** (`local_3d8`) inside `FUN_18003a070`, and then likely sends it (or passes it to a driver function inside `0x298c0` or shortly after).
+
+### The "God Mode" Strategy: The Hijack
+
+We don't need to replicate the D3D capture. We don't need to create the buffer. The DLL does it for us every frame.
+
+**We just need to hijack `FUN_1800298c0`.**
+
+This function is the "Camera". It takes a picture of the screen and puts the data in the buffer.
+If we hook this function and overwrite the buffer **right before it returns**, we replace the screen image with our own data. The DLL will then happily send our "fake" image to the keyboard.
+
+### The Final Script: `hijack_god_mode.js`
+
+This script hooks `FUN_1800298c0`. When the function finishes (populating the buffer with screen colors), the script wipes it and writes a **Red Breathing Effect** (or any pattern we want) into the buffer.
+
+To the keyboard, it looks like the screen is flashing Red. To us, it's total control.
+
+```javascript
+'use strict';
+
+const TARGET_MODULE = 'Gaming.AdvancedLighting.dll';
+const RVA_GET_KBD_COLOR = 0x298c0; // FUN_1800298c0 ("The Camera")
+
+// HID Report Constants
+const HEADER_SIZE = 6; 
+const BYTES_PER_KEY = 5;
+const TOTAL_SIZE = 960;
+
+// Animation State
+let tick = 0;
+
+function main() {
+    const module = Process.getModuleByName(TARGET_MODULE);
+    if (!module) {
+        setTimeout(main, 1000);
+        return;
+    }
+
+    const targetAddr = module.base.add(RVA_GET_KBD_COLOR);
+    console.log(`[+] Hooking GetKeyBoardColor at ${targetAddr}`);
+
+    Interceptor.attach(targetAddr, {
+        onEnter(args) {
+            // Save the buffer pointer.
+            // Based on decomp: FUN(dst, src, 0)
+            // src (arg 1, usually RDX in x64) is likely the start of the 960-byte buffer.
+            this.bufferPtr = args[1]; 
+        },
+        onLeave(retval) {
+            if (this.bufferPtr.isNull()) return;
+
+            // 1. Calculate our effect (e.g., Breathing Red)
+            tick++;
+            const intensity = Math.abs(Math.sin(tick * 0.05)) * 255;
+            const r = Math.floor(intensity);
+            const g = 0; 
+            const b = 0; 
+
+            // 2. Hijack the Buffer!
+            // We skip the header (6 bytes) and overwrite the keys.
+            // The buffer format is [KeyID_LE_16, R, G, B, 00] repeating.
+            
+            // Let's overwrite the first 100 keys found in the buffer.
+            // Note: The buffer might be sparse (only valid keys have IDs).
+            // We iterate the existing buffer to find valid slots and overwrite the color.
+            
+            const bodyPtr = this.bufferPtr.add(HEADER_SIZE);
+            
+            for (let i = 0; i < (TOTAL_SIZE - HEADER_SIZE); i += BYTES_PER_KEY) {
+                const keyPtr = bodyPtr.add(i);
+                
+                // Read Key ID (2 bytes)
+                const keyId = keyPtr.readU16();
+                
+                // If KeyID is valid (non-zero), overwrite the color
+                if (keyId !== 0) {
+                    keyPtr.add(2).writeU8(r); // R
+                    keyPtr.add(3).writeU8(g); // G
+                    keyPtr.add(4).writeU8(b); // B
+                }
+            }
+            
+            // Force return value to 1 (Success) just in case the real function failed
+            retval.replace(1);
+        }
+    });
+    
+    console.log("[+] God Mode Hijack Active. Turn on 'Aurora Sync' / 'Screen Sync' to see the effect.");
+}
+
+setImmediate(main);
+```
+
+### Instructions
+
+1.  Save this as `hijack_god_mode.js`.
+2.  Run: `frida -n "LenovoVantage-(LenovoGamingUserAddin).exe" -l hijack_god_mode.js`.
+3.  **Enable "Aurora Sync" (Screen Sync) in the Vantage App.**
+
+**Expected Result:**
+Instead of mirroring your screen, your keyboard should start pulsing **Red**.
+If this works, **we have achieved God Mode.** We can then replace the "Breathing Red" logic with a WebSocket listener or any other input source you desire.
