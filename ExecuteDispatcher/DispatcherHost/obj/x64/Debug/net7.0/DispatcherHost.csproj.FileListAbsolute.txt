@@ -1,0 +1,16 @@
+C:\Users\h4rdc\keyboard-led-project\ExecuteDispatcher\DispatcherHost\bin\x64\Debug\net7.0\DispatcherHost.exe
+C:\Users\h4rdc\keyboard-led-project\ExecuteDispatcher\DispatcherHost\bin\x64\Debug\net7.0\DispatcherBridge.dll
+C:\Users\h4rdc\keyboard-led-project\ExecuteDispatcher\DispatcherHost\bin\x64\Debug\net7.0\DispatcherHost.deps.json
+C:\Users\h4rdc\keyboard-led-project\ExecuteDispatcher\DispatcherHost\bin\x64\Debug\net7.0\DispatcherHost.runtimeconfig.json
+C:\Users\h4rdc\keyboard-led-project\ExecuteDispatcher\DispatcherHost\bin\x64\Debug\net7.0\DispatcherHost.dll
+C:\Users\h4rdc\keyboard-led-project\ExecuteDispatcher\DispatcherHost\bin\x64\Debug\net7.0\DispatcherHost.pdb
+C:\Users\h4rdc\keyboard-led-project\ExecuteDispatcher\DispatcherHost\obj\x64\Debug\net7.0\DispatcherHost.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\h4rdc\keyboard-led-project\ExecuteDispatcher\DispatcherHost\obj\x64\Debug\net7.0\DispatcherHost.AssemblyInfoInputs.cache
+C:\Users\h4rdc\keyboard-led-project\ExecuteDispatcher\DispatcherHost\obj\x64\Debug\net7.0\DispatcherHost.AssemblyInfo.cs
+C:\Users\h4rdc\keyboard-led-project\ExecuteDispatcher\DispatcherHost\obj\x64\Debug\net7.0\DispatcherHost.csproj.CoreCompileInputs.cache
+C:\Users\h4rdc\keyboard-led-project\ExecuteDispatcher\DispatcherHost\obj\x64\Debug\net7.0\DispatcherHost.sourcelink.json
+C:\Users\h4rdc\keyboard-led-project\ExecuteDispatcher\DispatcherHost\obj\x64\Debug\net7.0\DispatcherHost.dll
+C:\Users\h4rdc\keyboard-led-project\ExecuteDispatcher\DispatcherHost\obj\x64\Debug\net7.0\refint\DispatcherHost.dll
+C:\Users\h4rdc\keyboard-led-project\ExecuteDispatcher\DispatcherHost\obj\x64\Debug\net7.0\DispatcherHost.pdb
+C:\Users\h4rdc\keyboard-led-project\ExecuteDispatcher\DispatcherHost\obj\x64\Debug\net7.0\DispatcherHost.genruntimeconfig.cache
+C:\Users\h4rdc\keyboard-led-project\ExecuteDispatcher\DispatcherHost\obj\x64\Debug\net7.0\ref\DispatcherHost.dll

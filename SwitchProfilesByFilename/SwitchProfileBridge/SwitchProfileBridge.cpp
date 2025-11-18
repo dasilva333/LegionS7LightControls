@@ -216,20 +216,39 @@ extern "C" __declspec(dllexport) bool ApplyProfileByFilename(const wchar_t* prof
         return false;
     }
 
+// --- Replace with this new block ---
     unsigned int details[12] = {};
     long long scratch[7] = {};
     void* hw = reinterpret_cast<void*>(base + 0x7E840);
-    initProfile(reinterpret_cast<long long>(hw), details, scratch, nullptr);
-    Log(L"init_profile_detail invoked");
 
-    uint32_t activeProfileId = 0;
-    if (getProfileIndex) {
-        getProfileIndex(hw);
-        activeProfileId = *reinterpret_cast<uint32_t*>(reinterpret_cast<char*>(hw) + 0x154);
+    // --- START: New Buffer Replay Logic ---
+    std::wstring goldenPath = GetModuleDirectory() + L"\\golden_details.bin";
+    FILE* goldenFile = nullptr;
+    _wfopen_s(&goldenFile, goldenPath.c_str(), L"rb");
+    if (goldenFile) {
+        size_t bytesRead = fread(details, 1, 48, goldenFile);
+        fclose(goldenFile);
+        if (bytesRead == 48) {
+            Log(L"SUCCESS: Loaded 48 bytes from golden_details.bin into 'details' buffer.");
+        } else {
+            Log(L"WARNING: Read only %zu bytes from golden_details.bin. Buffer may be incorrect.", bytesRead);
+        }
     } else {
-        Log(L"get_profile_index missing; defaulting profile id to current cache");
-        activeProfileId = details[0];
+        Log(L"WARNING: golden_details.bin not found. Using zeroed 'details' buffer.");
     }
+    // --- END: New Buffer Replay Logic ---
+
+    initProfile(reinterpret_cast<long long>(hw), details, scratch, nullptr);
+    Log(L"init_profile_detail invoked with (potentially) golden buffer.");
+
+    uint32_t activeProfileId = 4;
+    // if (getProfileIndex) {
+    //     getProfileIndex(hw);
+    //     activeProfileId = *reinterpret_cast<uint32_t*>(reinterpret_cast<char*>(hw) + 0x154);
+    // } else {
+    //     Log(L"get_profile_index missing; defaulting profile id to current cache");
+    //     activeProfileId = details[0];
+    // }
     Log(L"Active profile id detected: %u", activeProfileId);
     effectJson["profileId"] = activeProfileId;
     std::string payloadInner = effectJson.dump();

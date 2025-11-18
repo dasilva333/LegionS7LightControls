@@ -1,0 +1,1 @@
+curl -X POST http://localhost:3005/profiles/apply-by-file -H "Content-Type: application/json" -d "{\"filename\": \"always_dark_red\"}"
