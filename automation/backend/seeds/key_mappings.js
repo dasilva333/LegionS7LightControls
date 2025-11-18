@@ -1,22 +1,28 @@
 /**
  * @param { import("knex").Knex } knex
- * @returns { Promise<void> } 
+ * @returns { Promise<void> }
  */
+const groups = require('./key_groups.json');
+
 exports.seed = async function(knex) {
+  // 1. Deletes ALL existing entries to reset state
   await knex('key_mappings').del();
-  await knex('key_mappings').insert([
-    {hardware_index: 1, key_name: 'ESC'},
-    {hardware_index: 2, key_name: 'F1'},
-    {hardware_index: 3, key_name: 'F2'},
-    {hardware_index: 4, key_name: 'F3'},
-    {hardware_index: 5, key_name: 'F4'},
-    {hardware_index: 6, key_name: 'F5'},
-    {hardware_index: 7, key_name: 'F6'},
-    {hardware_index: 8, key_name: 'F7'},
-    {hardware_index: 9, key_name: 'F8'},
-    {hardware_index: 10, key_name: 'F9'},
-    {hardware_index: 11, key_name: 'F10'},
-    {hardware_index: 12, key_name: 'F11'},
-    {hardware_index: 13, key_name: 'F12'}
-  ]);
+
+  // 2. Flatten the nested JSON structure into an array of rows
+  const rowsToInsert = [];
+
+  for (const group of groups) {
+    for (const key of group.keys) {
+      rowsToInsert.push({
+        hardware_index: key.id,
+        key_name: key.key_name,
+        group_name: group.group_name,
+        grid_row: key.row,
+        grid_column: key.col
+      });
+    }
+  }
+
+  // 3. Insert all rows
+  await knex('key_mappings').insert(rowsToInsert);
 };

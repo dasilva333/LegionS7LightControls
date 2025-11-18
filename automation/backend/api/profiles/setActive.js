@@ -1,7 +1,7 @@
 const { sendCommand } = require('../../frida/proxy');
 
 module.exports = {
-  method: "post",
+  method: "get",
   route: "/profiles/active/:id",
   handler: async (req, res) => {
     try {

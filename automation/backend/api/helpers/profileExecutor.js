@@ -60,23 +60,25 @@ function profileExecutor(profileName) {
 
 module.exports = { profileExecutor };
 
-// // --- Main Execution Logic (Self-contained test) ---
-// async function main() {
-//     const profileToApply = process.argv[2];
+// --- Main Execution Logic (CLI Support) ---
+// This block only runs if this file is executed directly via node (not required as a module)
+if (require.main === module) {
+    async function main() {
+        const profileToApply = process.argv[2];
 
-//     if (!profileToApply) {
-//         console.error('ERROR: Please provide a profile name to apply.');
-//         console.error('Usage: node index.js <profileName>');
-//         process.exit(1);
-//     }
-    
-//     try {
-//         await profileExecutor(profileToApply);
-//         console.log("process exited gracefully");
-//     } catch (err) {
-//         console.error("Executor failed with an unrecoverable error:", err);
-//     }
-// }
+        if (!profileToApply) {
+            console.error('ERROR: Please provide a profile name to apply.');
+            console.error('Usage: node index.js <profileName>');
+            process.exit(1);
+        }
+        
+        try {
+            await profileExecutor(profileToApply);
+            console.log("process exited gracefully");
+        } catch (err) {
+            console.error("Executor failed with an unrecoverable error:", err);
+        }
+    }
 
-// // Run the test.
-// main();
+    main();
+}

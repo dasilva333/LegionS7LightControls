@@ -192,7 +192,7 @@ async function runTimeOfDayTest() {
             profileId: 1
         };
 
-        fs.writeFileSync(outputFilePath, JSON.stringify(effectPayload, null, 4));
+        // fs.writeFileSync(outputFilePath, JSON.stringify(effectPayload, null, 4));
         console.log(`[4/4] Successfully wrote new effect to: ${outputFilePath}`);
         console.log('--- Test Complete ---');
 

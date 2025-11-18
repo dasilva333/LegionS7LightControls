@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const tinygradient = require('tinygradient');
 const { profileExecutor } = require('../api/helpers/profileExecutor');
+const stateManager = require('../services/stateManager');
 
 // --- Configuration ---
 const TICK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -21,6 +22,11 @@ function timeToMinutes(timeStr) {
  * The core logic for a single tick of the scheduler.
  */
 async function tick() {
+       // 1. ASK PERMISSION FIRST
+    if (!stateManager.canAmbientUpdate()) {
+        console.log('[ToD] Blocked by higher priority override. Skipping.');
+        return;
+    }
     console.log('[TimeOfDayDaemon] Tick...');
 
     try {
@@ -202,6 +208,12 @@ function start() {
     // Run the first tick immediately on startup, then start the interval.
     tick();
     setInterval(tick, TICK_INTERVAL_MS);
+    // 2. LISTEN FOR RESTORE EVENTS
+    // When a game closes, run immediately. Don't wait 5 minutes.
+    stateManager.events.on('state-restored', () => {
+        console.log('[ToD] State restored. Forcing update.');
+        tick();
+    });
 }
 
 // --- Start the daemon ---
