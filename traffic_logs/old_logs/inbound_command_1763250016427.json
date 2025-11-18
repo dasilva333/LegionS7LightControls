@@ -1,0 +1,8 @@
+{
+  "timestamp": 1763250016427,
+  "direction": "inbound",
+  "type": "command",
+  "object_pointer": "0x1cc55fde40",
+  "length": 229,
+  "string_content": "{\"contract\":\"Gaming.AdvancedLighting\",\"command\":\"Get-KbdBasicInfo\",\"payload\":\"\",\"targetAddin\":null,\"cancelEvent\":\"Gaming.AdvancedLighting-Get-KbdBasicInfo#7d90aafd187b4f9ab63febf5f47d0ed6\",\"clientId\":\"Consumer\",\"callerPid\":43092}"
+}

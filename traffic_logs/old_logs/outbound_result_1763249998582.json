@@ -1,0 +1,8 @@
+{
+  "timestamp": 1763249998582,
+  "direction": "outbound",
+  "type": "result",
+  "object_pointer": "0x1cc3dfcd60",
+  "length": 207,
+  "string_content": "{\"errorcode\":0,\"errordesc\":\"success\",\"payload\":\"{\\\"CapabilityList\\\":[{\\\"key\\\":\\\"AdvancedLedHidDevice\\\",\\\"value\\\":\\\"true\\\"},{\\\"key\\\":\\\"ledAdvancedSetFeature\\\",\\\"value\\\":\\\"true\\\"}]}\",\"percentage\":100,\"type\":0}"
+}

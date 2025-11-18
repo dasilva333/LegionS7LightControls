@@ -1,0 +1,8 @@
+{
+  "timestamp": 1763339364052,
+  "direction": "inbound",
+  "type": "command",
+  "object_pointer": "0x580d1fdde0",
+  "length": 237,
+  "string_content": "{\"contract\":\"Gaming.AdvancedLighting\",\"command\":\"Set-ProfileEditState\",\"payload\":\"\",\"targetAddin\":null,\"cancelEvent\":\"Gaming.AdvancedLighting-Set-ProfileEditState#3a9ede5100b9462c92d96cb14473d6ac\",\"clientId\":\"Consumer\",\"callerPid\":12340}"
+}

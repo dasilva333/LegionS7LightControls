@@ -1,0 +1,8 @@
+{
+  "timestamp": 1763172410807,
+  "direction": "outbound",
+  "type": "result",
+  "object_pointer": "0x1cc3dfdda0",
+  "length": 232,
+  "string_content": "{\"errorcode\":0,\"errordesc\":\"success\",\"payload\":\"{\\\"Didsuccess\\\":\\\"Success\\\",\\\"SettingList\\\":[{\\\"Value\\\":\\\"Success\\\",\\\"key\\\":\\\"Didsuccess\\\"},{\\\"Value\\\":\\\"Set-LightingProfileDetails\\\",\\\"key\\\":\\\"Command\\\"}]}\",\"percentage\":100,\"type\":0}"
+}

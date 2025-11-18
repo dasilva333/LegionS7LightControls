@@ -1,0 +1,1 @@
+{"errorcode":0,"errordesc":"success","payload":"{\"CapabilityList\":[{\"key\":\"AdvancedLedHidDevice\",\"value\":\"true\"},{\"key\":\"ledAdvancedSetFeature\",\"value\":\"true\"}]}","percentage":100,"type":0}

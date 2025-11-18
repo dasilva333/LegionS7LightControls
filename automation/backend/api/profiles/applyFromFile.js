@@ -1,54 +1,40 @@
 /**
  * Express route handler for applying a lighting profile from a saved JSON file.
+ * This now uses the robust external C# worker process.
  */
 
-// We imagine a helper that knows how to read our effect files.
-const { loadEffectFile } = require('../helpers/effects');
-
-// We imagine a central builder that takes a FINALIZED payload object.
-const { buildSetProfileDetailsCommand } = require('../../frida/payloadBuilder');
-
-// We imagine our Frida proxy that can send any command.
-const { sendCommand } = require('../../frida/proxy');
+// We only need the new profileExecutor helper.
+// We are completely bypassing the Frida stack for this write operation.
+const { profileExecutor } = require('../helpers/profileExecutor.js');
 
 module.exports = {
   method: "post",
   route: "/profiles/apply-by-file",
   
+  /**
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   */
   handler: async (req, res) => {
     const { filename } = req.body;
     if (!filename) {
-      return res.status(400).json({ success: false, error: "Request body must include a 'filename'." });
+        return res.status(400).json({ success: false, error: "Request body must include a 'filename'." });
     }
 
     try {
       console.log(`\n--- [API /apply-by-file] Processing '${filename}' ---`);
 
-      const layersObject = loadEffectFile(filename);
-      const activeProfileId = await sendCommand('getActiveProfileId');
-      console.log(`[API] Fetched active profile ID: ${activeProfileId}`);
-      
-      layersObject.profileId = activeProfileId;
+      // THE FIX: The logic is now a single, simple call to the executor.
+      // The executor handles spawning the C# process, which in turn reads the file
+      // and builds the native command.
+      console.log(`[API] Dispatching command to external worker...`);
+      await profileExecutor(filename);
 
-      const { commandString, payloadString } = buildSetProfileDetailsCommand(layersObject);
-
-      // THE FIX: Add detailed logging, as you requested.
-      console.log(`[API] Built Native Command Envelope:`);
-      try {
-        // Pretty-print the JSON for readability
-        console.log(JSON.stringify(JSON.parse(commandString), null, 2));
-      } catch {
-        console.log(commandString); // Fallback for non-JSON
-      }
-      console.log(`[API] Built Native Payload Tag: "${payloadString}"`);
-      
-      console.log(`[API] Dispatching to Frida worker...`);
-      const result = await sendCommand('executeDispatcher', { commandString, payloadString });
-
-      res.json({ success: true, filename, profileId: activeProfileId, result });
+      // Since the worker's termination is our success signal, we can just return a success message.
+      res.json({ success: true, filename, note: "Profile application command sent to worker." });
 
     } catch (err) {
-      console.error(`[API /profiles/apply-by-file] FATAL ERROR: ${err.message}`);
+      console.error(`[API /apply-by-file] FATAL ERROR: ${err.message}`);
       res.status(500).json({ success: false, error: err.message });
     }
   }

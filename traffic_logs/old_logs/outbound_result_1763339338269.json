@@ -1,0 +1,8 @@
+{
+  "timestamp": 1763339338269,
+  "direction": "outbound",
+  "type": "result",
+  "object_pointer": "0x5811dfdc30",
+  "length": 226,
+  "string_content": "{\"errorcode\":0,\"errordesc\":\"success\",\"payload\":\"{\\\"Didsuccess\\\":\\\"Success\\\",\\\"SettingList\\\":[{\\\"Value\\\":\\\"Success\\\",\\\"key\\\":\\\"Didsuccess\\\"},{\\\"Value\\\":\\\"Set-ProfileEditState\\\",\\\"key\\\":\\\"Command\\\"}]}\",\"percentage\":100,\"type\":0}"
+}

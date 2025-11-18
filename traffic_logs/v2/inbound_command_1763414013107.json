@@ -1,0 +1,5 @@
+{
+  "timestamp": 1763414013107,
+  "object_pointer": "0x189b1fe000",
+  "string_content": "{\"contract\":\"Gaming.AdvancedLighting\",\"command\":\"Set-StartCurKeysColorCallback\",\"payload\":\"\",\"targetAddin\":null,\"cancelEvent\":\"Gaming.AdvancedLighting-Set-StartCurKeysColorCallback#c021686a6d1c41dea4ef7bc6f5e21c0c\",\"clientId\":\"Consumer\",\"callerPid\":9108}"
+}

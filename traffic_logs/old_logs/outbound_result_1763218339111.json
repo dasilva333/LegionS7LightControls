@@ -1,0 +1,8 @@
+{
+  "timestamp": 1763218339111,
+  "direction": "outbound",
+  "type": "result",
+  "object_pointer": "0x1cc49fe6b0",
+  "length": 234,
+  "string_content": "{\"errorcode\":0,\"errordesc\":\"success\",\"payload\":\"{\\\"Didsuccess\\\":\\\"Success\\\",\\\"SettingList\\\":[{\\\"Value\\\":\\\"Set-StopCurKeysColorCallback\\\",\\\"key\\\":\\\"Command\\\"},{\\\"Value\\\":\\\"Success\\\",\\\"key\\\":\\\"Didsuccess\\\"}]}\",\"percentage\":100,\"type\":0}"
+}

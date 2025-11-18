@@ -1,0 +1,8 @@
+{
+  "timestamp": 1763247677760,
+  "direction": "inbound",
+  "type": "payload",
+  "object_pointer": "0x1cc8dfe1c0",
+  "length": 9,
+  "string_content": "write_log"
+}

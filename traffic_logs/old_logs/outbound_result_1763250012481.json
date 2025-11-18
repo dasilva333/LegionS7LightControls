@@ -1,0 +1,8 @@
+{
+  "timestamp": 1763250012481,
+  "direction": "outbound",
+  "type": "result",
+  "object_pointer": "0x1cc8dfe940",
+  "length": 77,
+  "string_content": "{\"errorcode\":0,\"errordesc\":\"success\",\"payload\":\"5\",\"percentage\":100,\"type\":0}"
+}

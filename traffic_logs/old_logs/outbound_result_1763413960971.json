@@ -1,0 +1,5 @@
+{
+  "timestamp": 1763413960971,
+  "object_pointer": "0x1899dfe430",
+  "string_content": "{\"errorcode\":0,\"errordesc\":\"success\",\"payload\":\"{\\\"Didsuccess\\\":\\\"Success\\\",\\\"SettingList\\\":[{\\\"Value\\\":\\\"Set-StopCurKeysColorCallback\\\",\\\"key\\\":\\\"Command\\\"},{\\\"Value\\\":\\\"Success\\\",\\\"key\\\":\\\"Didsuccess\\\"}]}\",\"percentage\":100,\"type\":0}"
+}

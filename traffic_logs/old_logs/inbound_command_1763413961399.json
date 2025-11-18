@@ -1,0 +1,5 @@
+{
+  "timestamp": 1763413961399,
+  "object_pointer": "0x189b9fe1e0",
+  "string_content": "{\"contract\":\"Gaming.AdvancedLighting\",\"command\":\"Get-BrightnessLevel\",\"payload\":\"\",\"targetAddin\":null,\"cancelEvent\":\"Gaming.AdvancedLighting-Get-BrightnessLevel#29054b8b6ecb40e6b484b6e9383cd40d\",\"clientId\":\"Consumer\",\"callerPid\":9108}"
+}

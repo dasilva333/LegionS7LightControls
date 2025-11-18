@@ -1,0 +1,8 @@
+{
+  "timestamp": 1763247902405,
+  "direction": "inbound",
+  "type": "command",
+  "object_pointer": "0x1cc21fe200",
+  "length": 246,
+  "string_content": "{\"contract\":\"Gaming.AdvancedLighting\",\"command\":\"Set-LightingProfileIndex\",\"payload\":\"5\",\"targetAddin\":null,\"cancelEvent\":\"Gaming.AdvancedLighting-Set-LightingProfileIndex#240fb5dae6e342a5a50677e6d8c2a4b7\",\"clientId\":\"Consumer\",\"callerPid\":48752}"
+}

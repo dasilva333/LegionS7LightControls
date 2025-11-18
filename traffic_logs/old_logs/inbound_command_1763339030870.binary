@@ -1,0 +1,1 @@
+{"contract":"Gaming.AdvancedLighting","command":"Set-LightingProfileDetails","payload":"{\"layers\":[],\"profileId\":4}","targetAddin":null,"cancelEvent":"Gaming.AdvancedLighting-Set-LightingProfileDetails#8cdf8b83e1234b968511d0248bbf26e2","clientId":"Consumer","callerPid":12340}

@@ -1,0 +1,5 @@
+{
+  "timestamp": 1763413961481,
+  "object_pointer": "0x189e9fcca0",
+  "string_content": "{\"callerPid\":0,\"cancelEvent\":\"\",\"command\":\"Get-Capability\",\"contract\":\"Gaming.AdvancedLighting\",\"payload\":\"{\\\"type\\\":\\\"main\\\"}\"}"
+}
