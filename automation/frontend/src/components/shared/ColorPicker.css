@@ -1,0 +1,19 @@
+.color-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.color-picker input[type="color"] {
+  width: 36px;
+  height: 24px;
+  border: none;
+  padding: 0;
+  background: transparent;
+}
+
+.color-picker span {
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+}

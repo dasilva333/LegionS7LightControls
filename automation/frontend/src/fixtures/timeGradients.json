@@ -1,0 +1,8 @@
+[
+  { "id": 1, "startTime": "00:00", "endTime": "06:00", "startRgb": "#8B0000", "endRgb": "#4B0082", "isActive": true },
+  { "id": 2, "startTime": "06:00", "endTime": "09:00", "startRgb": "#4B0082", "endRgb": "#FF8C00", "isActive": true },
+  { "id": 3, "startTime": "09:00", "endTime": "12:00", "startRgb": "#FF8C00", "endRgb": "#FFFF00", "isActive": true },
+  { "id": 4, "startTime": "12:00", "endTime": "16:00", "startRgb": "#FFFF00", "endRgb": "#32CD32", "isActive": true },
+  { "id": 5, "startTime": "16:00", "endTime": "20:00", "startRgb": "#32CD32", "endRgb": "#00008B", "isActive": true },
+  { "id": 6, "startTime": "20:00", "endTime": "23:59", "startRgb": "#00008B", "endRgb": "#8B0000", "isActive": true }
+]

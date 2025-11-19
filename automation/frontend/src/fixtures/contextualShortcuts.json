@@ -1,0 +1,28 @@
+[
+  {
+    "processName": "photoshop.exe",
+    "enabled": true,
+    "keys": [
+      { "keyId": 112, "color": "#FF4B4B" },
+      { "keyId": 135, "color": "#FF4B4B" }
+    ]
+  },
+  {
+    "processName": "davinciresolve.exe",
+    "enabled": true,
+    "keys": [
+      { "keyId": 69, "color": "#FFD700" },
+      { "keyId": 70, "color": "#FFD700" },
+      { "keyId": 71, "color": "#FFD700" }
+    ]
+  },
+  {
+    "processName": "ableton.exe",
+    "enabled": false,
+    "keys": [
+      { "keyId": 24, "color": "#4B9EFF" },
+      { "keyId": 25, "color": "#4B9EFF" },
+      { "keyId": 26, "color": "#4B9EFF" }
+    ]
+  }
+]

@@ -1,0 +1,11 @@
+.progress-card__row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.progress-card__row .key-picker,
+.progress-card__row .color-picker {
+  flex: 1 1 200px;
+}

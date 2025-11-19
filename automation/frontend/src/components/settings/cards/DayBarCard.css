@@ -1,0 +1,17 @@
+.daybar-card__item {
+  --padding-start: 0;
+}
+
+.daybar-card__preview {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.daybar-card__preview-bar {
+  width: 100%;
+  height: 20px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}

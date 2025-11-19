@@ -1,0 +1,51 @@
+.settings-toolbar,
+.settings-subtoolbar {
+  --padding-start: 16px;
+  --padding-end: 16px;
+}
+
+.settings-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.settings-toolbar__right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #eb445a;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
+}
+
+.status-dot--connected {
+  background: #2dd36f;
+}
+
+.status-dot--disconnected {
+  background: #eb445a;
+}
+
+.godmode-label {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+}
+
+.settings-subtoolbar .zip-input {
+  display: flex;
+  flex-direction: column;
+  width: 160px;
+}

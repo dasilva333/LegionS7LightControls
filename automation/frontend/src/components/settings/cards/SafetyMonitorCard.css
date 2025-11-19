@@ -1,0 +1,11 @@
+.safety-card__unauth {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.safety-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}

@@ -1,0 +1,23 @@
+.layer-card {
+  transition: opacity 0.2s ease;
+}
+
+.layer-card--disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.layer-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.layer-card__content--inactive {
+  opacity: 0.5;
+}
+
+.layer-card__content--disabled {
+  pointer-events: none;
+}
