@@ -23,13 +23,21 @@
             alerts: []        // List of active transient alerts
         };
 
+        // --- FX STATE (New) ---
+        // Map<KeyID, Opacity(0.0-1.0)>
+        const activeFades = new Map();
+
         // --- GEOMETRY PRE-CALC ---
-        const KEY_MAP = new Map();
+        const KEY_MAP = new Map();     // ID -> {row, col}
+        const NAME_TO_ID = new Map();  // "Q" -> ID
         
-        // FIX: We use keyGroups directly (no [0]) because we fixed the nesting in agent-core
+        // Note: keyGroups is the raw array injected by loader, no need for [0]
         keyGroups.forEach(group => {
             group.keys.forEach(k => {
-                KEY_MAP.set(k.id, { row: k.row, col: k.col, group: group.group_name });
+                const meta = { row: k.row, col: k.col, group: group.group_name };
+                KEY_MAP.set(k.id, meta);
+                // Normalize name for lookup (e.g. "Q" -> 66)
+                if(k.key_name) NAME_TO_ID.set(k.key_name.toUpperCase(), k.id);
             });
         });
 
@@ -90,13 +98,13 @@
                                 if (state.weather === 'RAIN') {
                                     // Matrix Rain Effect
                                     const noise = Math.sin(pos.col * 0.5 + tick * 0.1);
-                                    if (noise > 0.8) { b = 255; r = 0; g = 0; } 
+                                    if (noise > 0.8) { b = 255; r = 0; g = 0; } // Blue drops
                                 } else {
                                     // Time Gradient
                                     const brightness = Math.sin(state.timeOfDay * Math.PI);
-                                    b = Math.floor(100 * brightness);
-                                    g = Math.floor(50 * brightness);
-                                    r = Math.floor(20); 
+                                    b = Math.floor(60 * brightness); // Deep Blue base
+                                    g = Math.floor(20 * brightness);
+                                    r = 10;
                                 }
 
                                 // === LAYER 2: WIDGETS ===
@@ -115,6 +123,25 @@
                                         g = 0; r = 20; b = 0; 
                                     }
                                 }
+
+                                // === LAYER 4: TRANSIENT FX (The Lightning) ===
+                                if (activeFades.has(keyId)) {
+                                    let intensity = activeFades.get(keyId);
+                                    
+                                    // Additive Blending (White Flash)
+                                    const flash = 255 * intensity;
+                                    r = Math.min(255, r + flash);
+                                    g = Math.min(255, g + flash);
+                                    b = Math.min(255, b + flash);
+
+                                    // Decay the flash
+                                    intensity -= 0.08; // Fade speed
+                                    if (intensity <= 0) {
+                                        activeFades.delete(keyId);
+                                    } else {
+                                        activeFades.set(keyId, intensity);
+                                    }
+                                }
                             }
 
                             // Apply Color
@@ -129,12 +156,19 @@
         });
 
         // --- RPC EXPORTS ---
-        // FIX: Return the object DIRECTLY. Do not wrap in () => ({...})
         return {
             enable: () => { state.active = true; log("God Mode Enabled"); },
             disable: () => { state.active = false; log("God Mode Disabled"); },
             updateState: (partialState) => {
                 Object.assign(state, partialState);
+            },
+            
+            // NEW: This allows the lightningDemo.js to call us
+            flashKey: (keyName) => {
+                const id = NAME_TO_ID.get(keyName.toUpperCase());
+                if (id) {
+                    activeFades.set(id, 1.0); // 1.0 = Full Brightness
+                }
             }
         };
     }

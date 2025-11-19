@@ -9,7 +9,7 @@ app.use(express.json());
 // Initialize the Frida proxy, which will spawn the worker process in the background.
 console.log('[Server] Initializing Frida proxy...');
 require('./frida/proxy.js');
-require("./daemons/godModeDemo");
+require('./daemons/godModeDirector');
 // require('./daemons/timeOfDay.js');
 // require('./daemons/processMonitor');
 // -------------------------
@@ -51,7 +51,8 @@ if (fs.existsSync(apiDir)) {
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
-const port = process.env.PORT || 3005;
+const portArg = process.argv[2] ? Number(process.argv[2]) : undefined;
+const port = Number.isFinite(portArg) && portArg > 0 ? portArg : process.env.PORT || 3005;
 app.listen(port, () => {
   console.log(`Lighting automation backend listening on port ${port}`);
 });
