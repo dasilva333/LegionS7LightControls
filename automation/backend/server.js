@@ -9,7 +9,8 @@ app.use(express.json());
 // Initialize the Frida proxy, which will spawn the worker process in the background.
 console.log('[Server] Initializing Frida proxy...');
 require('./frida/proxy.js');
-require('./daemons/timeOfDay.js');
+require("./daemons/godModeDemo");
+// require('./daemons/timeOfDay.js');
 // require('./daemons/processMonitor');
 // -------------------------
 

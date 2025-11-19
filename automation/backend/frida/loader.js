@@ -10,31 +10,31 @@ const AGENT_ACTIONS_PATH = path.join(__dirname, 'actions');
 
 let agentApi = null;
 let isFridaReady = false;
-let messageQueue = []; // Queue for commands that arrive before Frida is ready.
-const GOLDEN_BUFFER_PATH = path.join(__dirname, 'golden_details.bin'); // Path to the golden buffer
+let messageQueue = [];
+const GOLDEN_BUFFER_PATH = path.join(__dirname, 'golden_details.bin');
+const KEY_GROUPS = require('../seeds/key_groups.json');
 
 function buildAgentScript() {
     console.log('[FridaLoader] Building agent script from source files...');
 
     let script = fs.readFileSync(AGENT_CORE_PATH, 'utf8');
     
-    // --- START: New Buffer Injection Logic ---
+    // Buffer Injection
     if (fs.existsSync(GOLDEN_BUFFER_PATH)) {
-        console.log(`[FridaLoader] Found golden buffer at: ${GOLDEN_BUFFER_PATH}`);
+        console.log(`[FridaLoader] Found golden buffer.`);
         const buffer = fs.readFileSync(GOLDEN_BUFFER_PATH);
-        // Convert the Buffer object to a simple array of numbers, then join to a string.
         const bufferString = Array.from(buffer).join(',');
-        
-        // Replace the placeholder in the agent-core template.
         script = script.replace('// __GOLDEN_DETAILS_BUFFER__', bufferString);
-        console.log(`[FridaLoader] Injected ${buffer.length} bytes from golden buffer into agent script.`);
     } else {
-        console.warn(`[FridaLoader] WARNING: Golden buffer not found at ${GOLDEN_BUFFER_PATH}. Dispatcher may crash.`);
-        // If the file isn't there, we replace the placeholder with nothing, resulting in an empty array.
         script = script.replace('// __GOLDEN_DETAILS_BUFFER__', '');
     }
-    // --- END: New Buffer Injection Logic ---
 
+    // FIX: Target the exact string in agent-core.js
+    // We replace the empty array and comment with the real JSON array.
+    script = script.replace('/* __KEY_GROUPS__ */ []', JSON.stringify(KEY_GROUPS));
+    
+    fs.writeFileSync(path.join(__dirname, 'temp_agent.js'), script);
+    
     // Inject actions
     try {
         const actionFiles = fs.readdirSync(AGENT_ACTIONS_PATH).filter(f => f.endsWith('.js'));
@@ -50,7 +50,7 @@ function buildAgentScript() {
 }
 
 async function initializeFrida() {
-    isFridaReady = false; // Mark as not ready during initialization
+    isFridaReady = false; 
     agentApi = null;
 
     try {
@@ -61,7 +61,7 @@ async function initializeFrida() {
         const session = await device.attach(TARGET_PROCESS);
         
         session.detached.connect((reason) => {
-            console.error(`[FridaLoader] Session detached. Reason: ${reason}. Resetting and re-initializing...`);
+            console.error(`[FridaLoader] Session detached. Reason: ${reason}.`);
             isFridaReady = false;
             agentApi = null;
             setTimeout(initializeFrida, 5000);
@@ -80,29 +80,27 @@ async function initializeFrida() {
         await script.load();
         agentApi = script.exports;
         
-        // THE FIX: Mark Frida as ready and process any queued messages.
         isFridaReady = true;
         console.log(`[FridaLoader] Attached and agent loaded. Ready for IPC commands.`);
         processQueuedMessages();
 
     } catch (e) {
         console.error(`[FridaLoader] Frida initialization failed: ${e.message}`);
-        console.error('[FridaLoader] Is Lenovo Vantage running? Retrying in 10 seconds...');
         setTimeout(initializeFrida, 10000);
     }
 }
 
-// Function to execute a single command.
 async function executeCommand(message) {
     const { taskId, command, payload } = message;
 
+    // agentApi[command] will now exist because we merged the object in agent-core
     const actionFunc = agentApi[command];
     if (typeof actionFunc !== 'function') {
         return process.send({ taskId, error: `Unknown command: '${command}'` });
     }
 
     try {
-        console.log(`[FridaLoader] Executing command via RPC: ${command}`);
+        // console.log(`[FridaLoader] Executing command via RPC: ${command}`);
         const data = await actionFunc(payload);
         process.send({ taskId, data });
     } catch (e) {
@@ -111,18 +109,14 @@ async function executeCommand(message) {
     }
 }
 
-// Function to process the message queue.
 function processQueuedMessages() {
-    console.log(`[FridaLoader] Processing ${messageQueue.length} queued commands.`);
     while(messageQueue.length > 0) {
         const message = messageQueue.shift();
         executeCommand(message);
     }
 }
 
-// --- IPC Message Handling ---
 process.on('message', (message) => {
-    // THE FIX: If Frida isn't ready, queue the command. Otherwise, execute it immediately.
     if (!isFridaReady) {
         console.log(`[FridaLoader] Frida not ready. Queuing command: ${message.command}`);
         messageQueue.push(message);
@@ -131,5 +125,4 @@ process.on('message', (message) => {
     }
 });
 
-// Start the initialization process.
 initializeFrida();
