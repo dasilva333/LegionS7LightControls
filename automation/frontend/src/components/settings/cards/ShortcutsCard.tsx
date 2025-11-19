@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   IonAccordion,
   IonAccordionGroup,
@@ -18,10 +18,10 @@ import {
 } from '@ionic/react';
 import { addOutline, trashOutline, closeOutline, saveOutline } from 'ionicons/icons';
 import LayerCard from '../../shared/LayerCard';
-import contextualShortcuts from '../../../fixtures/contextualShortcuts.json';
 import keyGroups from '../../../fixtures/keyGroups.json';
 import KeyPicker from '../../shared/KeyPicker';
 import ColorPicker from '../../shared/ColorPicker';
+import { apiClient } from '../../../config/api';
 import './ShortcutsCard.css';
 
 type ShortcutsCardProps = {
@@ -29,8 +29,9 @@ type ShortcutsCardProps = {
 };
 
 type ShortcutEntry = {
+  id: number;
   processName: string;
-  enabled: boolean;
+  isActive: boolean;
   keys: { keyId: number; color: string }[];
 };
 
@@ -44,60 +45,108 @@ const buildKeyNameMap = () => {
 
 const ShortcutsCard: React.FC<ShortcutsCardProps> = ({ disabled }) => {
   const labelMap = useMemo(buildKeyNameMap, []);
-  const [shortcuts, setShortcuts] = useState<ShortcutEntry[]>(contextualShortcuts);
+  const [shortcuts, setShortcuts] = useState<ShortcutEntry[]>([]);
   const [isAddAppAlertOpen, setIsAddAppAlertOpen] = useState(false);
   const [isAddKeyModalOpen, setIsAddKeyModalOpen] = useState(false);
-  const [activeProcess, setActiveProcess] = useState<string | null>(null);
+  const [activeShortcutId, setActiveShortcutId] = useState<number | null>(null);
   const [pendingKey, setPendingKey] = useState<number | undefined>();
   const [pendingColor, setPendingColor] = useState('#FFFFFF');
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleToggleApp = (processName: string) => {
-    setShortcuts((prev) =>
-      prev.map((entry) =>
-        entry.processName === processName ? { ...entry, enabled: !entry.enabled } : entry
-      )
-    );
+  const fetchShortcuts = async () => {
+    try {
+      const data = await apiClient.get<ShortcutEntry[]>('/api/shortcuts');
+      setShortcuts(data);
+    } catch (error) {
+      console.error('[ShortcutsCard] Failed to fetch shortcuts', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleRemoveKey = (processName: string, keyId: number) => {
+  useEffect(() => {
+    fetchShortcuts();
+  }, []);
+
+  const handleToggleApp = async (shortcut: ShortcutEntry) => {
+    const nextState = !shortcut.isActive;
     setShortcuts((prev) =>
       prev.map((entry) =>
-        entry.processName === processName
-          ? { ...entry, keys: entry.keys.filter((k) => k.keyId !== keyId) }
-          : entry
+        entry.id === shortcut.id ? { ...entry, isActive: nextState } : entry
       )
     );
+    try {
+      await apiClient.put(`/api/shortcuts/${shortcut.id}`, { isActive: nextState });
+    } catch (error) {
+      console.error('[ShortcutsCard] Failed to toggle shortcut', error);
+      fetchShortcuts();
+    }
   };
 
-  const handleAddKey = (processName: string) => {
-    setActiveProcess(processName);
+  const handleRemoveKey = async (shortcut: ShortcutEntry, keyId: number) => {
+    const nextKeys = shortcut.keys.filter((k) => k.keyId !== keyId);
+    setShortcuts((prev) =>
+      prev.map((entry) =>
+        entry.id === shortcut.id ? { ...entry, keys: nextKeys } : entry
+      )
+    );
+    try {
+      await apiClient.put(`/api/shortcuts/${shortcut.id}`, { keys: nextKeys });
+    } catch (error) {
+      console.error('[ShortcutsCard] Failed to remove key', error);
+      fetchShortcuts();
+    }
+  };
+
+  const handleAddKey = (shortcutId: number) => {
+    setActiveShortcutId(shortcutId);
     setPendingKey(undefined);
     setPendingColor('#FFFFFF');
     setIsAddKeyModalOpen(true);
   };
 
-  const handleDeleteApp = (processName: string) => {
-    setShortcuts((prev) => prev.filter((entry) => entry.processName !== processName));
+  const handleDeleteApp = async (id: number) => {
+    try {
+      await apiClient.delete(`/api/shortcuts/${id}`);
+      setShortcuts((prev) => prev.filter((entry) => entry.id !== id));
+    } catch (error) {
+      console.error('[ShortcutsCard] Failed to delete shortcut', error);
+    }
   };
 
-  const handleSaveKey = () => {
-    if (!activeProcess || typeof pendingKey !== 'number') {
+  const handleSaveKey = async () => {
+    if (!activeShortcutId || typeof pendingKey !== 'number') {
       return;
     }
+    const nextKeys = (shortcuts.find((entry) => entry.id === activeShortcutId)?.keys || [])
+      .filter((k) => k.keyId !== pendingKey)
+      .concat({ keyId: pendingKey, color: pendingColor });
+
     setShortcuts((prev) =>
       prev.map((entry) =>
-        entry.processName === activeProcess
-          ? {
-              ...entry,
-              keys: [
-                ...entry.keys.filter((k) => k.keyId !== pendingKey),
-                { keyId: pendingKey, color: pendingColor }
-              ]
-            }
-          : entry
+        entry.id === activeShortcutId ? { ...entry, keys: nextKeys } : entry
       )
     );
     setIsAddKeyModalOpen(false);
+    try {
+      await apiClient.put(`/api/shortcuts/${activeShortcutId}`, { keys: nextKeys });
+    } catch (error) {
+      console.error('[ShortcutsCard] Failed to save key', error);
+      fetchShortcuts();
+    }
+  };
+
+  const handleCreateApp = async (name: string) => {
+    try {
+      const created = await apiClient.post<ShortcutEntry>('/api/shortcuts', {
+        processName: name,
+        keys: [],
+        isActive: true
+      });
+      setShortcuts((prev) => [...prev, created]);
+    } catch (error) {
+      console.error('[ShortcutsCard] Failed to create app', error);
+    }
   };
 
   const handleAddApp = () => {
@@ -112,26 +161,26 @@ const ShortcutsCard: React.FC<ShortcutsCardProps> = ({ disabled }) => {
     >
       <IonAccordionGroup>
         {shortcuts.map((entry) => (
-          <IonAccordion value={entry.processName} key={entry.processName} disabled={disabled}>
+          <IonAccordion value={entry.processName} key={entry.id} disabled={disabled}>
             <IonItem slot="header">
               <IonLabel>
                 <h3>{entry.processName}</h3>
-                <IonText color={entry.enabled ? 'success' : 'medium'}>
-                  {entry.enabled ? 'Enabled' : 'Disabled'}
+                <IonText color={entry.isActive ? 'success' : 'medium'}>
+                  {entry.isActive ? 'Enabled' : 'Disabled'}
                 </IonText>
               </IonLabel>
               <IonButton
                 slot="end"
                 fill="clear"
                 size="small"
-                color={entry.enabled ? 'medium' : 'success'}
+                color={entry.isActive ? 'medium' : 'success'}
                 onClick={(event) => {
                   event.stopPropagation();
-                  handleToggleApp(entry.processName);
+                  handleToggleApp(entry);
                 }}
                 disabled={disabled}
               >
-                {entry.enabled ? 'Disable' : 'Enable'}
+                {entry.isActive ? 'Disable' : 'Enable'}
               </IonButton>
               <IonButton
                 slot="end"
@@ -139,7 +188,7 @@ const ShortcutsCard: React.FC<ShortcutsCardProps> = ({ disabled }) => {
                 color="danger"
                 onClick={(event) => {
                   event.stopPropagation();
-                  handleDeleteApp(entry.processName);
+                  handleDeleteApp(entry.id);
                 }}
                 disabled={disabled}
               >
@@ -168,22 +217,22 @@ const ShortcutsCard: React.FC<ShortcutsCardProps> = ({ disabled }) => {
                       <IonText className="shortcuts-card__color-label">
                         {key.color.toUpperCase()}
                       </IonText>
-                      <IonButton
-                        slot="end"
-                        fill="clear"
-                        color="danger"
-                        onClick={() => handleRemoveKey(entry.processName, key.keyId)}
-                        disabled={disabled}
-                      >
-                        <IonIcon slot="icon-only" icon={trashOutline} />
-                      </IonButton>
-                    </IonItem>
+            <IonButton
+              slot="end"
+              fill="clear"
+              color="danger"
+              onClick={() => handleRemoveKey(entry, key.keyId)}
+              disabled={disabled}
+            >
+              <IonIcon slot="icon-only" icon={trashOutline} />
+            </IonButton>
+          </IonItem>
                   );
                 })}
               </IonList>
               <IonButton
                 fill="outline"
-                onClick={() => handleAddKey(entry.processName)}
+                onClick={() => handleAddKey(entry.id)}
                 disabled={disabled}
               >
                 <IonIcon slot="start" icon={addOutline} />
@@ -214,23 +263,18 @@ const ShortcutsCard: React.FC<ShortcutsCardProps> = ({ disabled }) => {
         ]}
         buttons={[
           { text: 'Cancel', role: 'cancel', handler: () => setIsAddAppAlertOpen(false) },
-          {
-            text: 'Add',
-            handler: (data) => {
-              const name = (data?.processName ?? '').trim();
-              if (!name) {
-                setIsAddAppAlertOpen(false);
-                return;
-              }
-              setShortcuts((prev) => {
-                if (prev.some((entry) => entry.processName === name)) {
-                  return prev;
+              {
+                text: 'Add',
+                handler: (data) => {
+                  const name = (data?.processName ?? '').trim();
+                  if (!name) {
+                    setIsAddAppAlertOpen(false);
+                    return;
+                  }
+                  handleCreateApp(name);
+                  setIsAddAppAlertOpen(false);
                 }
-                return [...prev, { processName: name, enabled: true, keys: [] }];
-              });
-              setIsAddAppAlertOpen(false);
-            }
-          }
+              }
         ]}
         onDidDismiss={() => setIsAddAppAlertOpen(false)}
       />
@@ -282,3 +326,4 @@ const ShortcutsCard: React.FC<ShortcutsCardProps> = ({ disabled }) => {
 };
 
 export default ShortcutsCard;
+

@@ -2,7 +2,7 @@
 
 const path = require('path');
 const fs = require('fs');
-const frida = require('frida');
+// REMOVED: const frida = require('frida'); // Frida v16 is ESM-only, we load it dynamically later.
 
 const TARGET_PROCESS = 'LenovoVantage-(LenovoGamingUserAddin).exe';
 const AGENT_CORE_PATH = path.join(__dirname, 'agent-core.js');
@@ -10,7 +10,7 @@ const AGENT_ACTIONS_PATH = path.join(__dirname, 'actions');
 
 let agentApi = null;
 let isFridaReady = false;
-let messageQueue = [];
+let messageQueue = []; 
 const GOLDEN_BUFFER_PATH = path.join(__dirname, 'golden_details.bin');
 const KEY_GROUPS = require('../seeds/key_groups.json');
 
@@ -19,7 +19,7 @@ function buildAgentScript() {
 
     let script = fs.readFileSync(AGENT_CORE_PATH, 'utf8');
     
-    // Buffer Injection
+    // --- Buffer Injection ---
     if (fs.existsSync(GOLDEN_BUFFER_PATH)) {
         console.log(`[FridaLoader] Found golden buffer.`);
         const buffer = fs.readFileSync(GOLDEN_BUFFER_PATH);
@@ -29,10 +29,11 @@ function buildAgentScript() {
         script = script.replace('// __GOLDEN_DETAILS_BUFFER__', '');
     }
 
-    // FIX: Target the exact string in agent-core.js
-    // We replace the empty array and comment with the real JSON array.
+    // --- Key Group Injection ---
+    // We replace the placeholder /* __KEY_GROUPS__ */ [] with the actual JSON
     script = script.replace('/* __KEY_GROUPS__ */ []', JSON.stringify(KEY_GROUPS));
     
+    // Debug write
     fs.writeFileSync(path.join(__dirname, 'temp_agent.js'), script);
     
     // Inject actions
@@ -52,16 +53,22 @@ function buildAgentScript() {
 async function initializeFrida() {
     isFridaReady = false; 
     agentApi = null;
+    let agentSource = '';
 
     try {
         console.log(`[FridaLoader] Attaching to target process: ${TARGET_PROCESS}...`);
         
-        const agentSource = buildAgentScript();
+        // --- FIX: Dynamic Import for Frida v16 ---
+        const fridaModule = await import('frida');
+        const frida = fridaModule.default || fridaModule; // Handle ESM export
+        // -----------------------------------------
+
+        agentSource = buildAgentScript();
         const device = await frida.getLocalDevice();
         const session = await device.attach(TARGET_PROCESS);
         
         session.detached.connect((reason) => {
-            console.error(`[FridaLoader] Session detached. Reason: ${reason}.`);
+            console.error(`[FridaLoader] Session detached. Reason: ${reason}. Resetting...`);
             isFridaReady = false;
             agentApi = null;
             setTimeout(initializeFrida, 5000);
@@ -77,6 +84,8 @@ async function initializeFrida() {
             }
         });
 
+        fs.writeFileSync(path.join(__dirname, 'temp_agent_2.js'), agentSource);
+
         await script.load();
         agentApi = script.exports;
         
@@ -85,7 +94,10 @@ async function initializeFrida() {
         processQueuedMessages();
 
     } catch (e) {
+        if(agentSource) fs.writeFileSync(path.join(__dirname, 'temp_agent_error.js'), agentSource);
+        
         console.error(`[FridaLoader] Frida initialization failed: ${e.message}`);
+        console.error('[FridaLoader] Is Lenovo Vantage running? Retrying in 10 seconds...');
         setTimeout(initializeFrida, 10000);
     }
 }
@@ -93,14 +105,12 @@ async function initializeFrida() {
 async function executeCommand(message) {
     const { taskId, command, payload } = message;
 
-    // agentApi[command] will now exist because we merged the object in agent-core
     const actionFunc = agentApi[command];
     if (typeof actionFunc !== 'function') {
         return process.send({ taskId, error: `Unknown command: '${command}'` });
     }
 
     try {
-        // console.log(`[FridaLoader] Executing command via RPC: ${command}`);
         const data = await actionFunc(payload);
         process.send({ taskId, data });
     } catch (e) {

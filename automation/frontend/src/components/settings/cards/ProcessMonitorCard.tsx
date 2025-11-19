@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   IonAlert,
   IonButton,
@@ -10,7 +10,7 @@ import {
 } from '@ionic/react';
 import { trashOutline, addOutline } from 'ionicons/icons';
 import LayerCard from '../../shared/LayerCard';
-import gamingModeProcesses from '../../../fixtures/gamingModeProcesses.json';
+import { apiClient } from '../../../config/api';
 
 type ProcessMonitorCardProps = {
   disabled?: boolean;
@@ -18,26 +18,66 @@ type ProcessMonitorCardProps = {
 
 type ProcessEntry = {
   id: number;
-  processName: string;
-  enabled: boolean;
+  process_name: string;
+  profile_filename: string;
+  is_active: boolean;
+  priority: number;
 };
 
 const ProcessMonitorCard: React.FC<ProcessMonitorCardProps> = ({ disabled }) => {
-  const initialProcesses = useMemo<ProcessEntry[]>(
-    () => gamingModeProcesses.map((proc) => ({ ...proc })),
-    []
-  );
-  const [processes, setProcesses] = useState<ProcessEntry[]>(initialProcesses);
+  const [processes, setProcesses] = useState<ProcessEntry[]>([]);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleToggle = (id: number, checked: boolean) => {
-    setProcesses((prev) =>
-      prev.map((proc) => (proc.id === id ? { ...proc, enabled: checked } : proc))
-    );
+  const fetchProcesses = async () => {
+    try {
+      const data = await apiClient.get<ProcessEntry[]>('/processes');
+      setProcesses(data);
+    } catch (error) {
+      console.error('[ProcessMonitorCard] Failed to fetch processes', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleRemove = (id: number) => {
-    setProcesses((prev) => prev.filter((proc) => proc.id !== id));
+  useEffect(() => {
+    fetchProcesses();
+  }, []);
+
+  const handleToggle = async (id: number, checked: boolean) => {
+    setProcesses((prev) =>
+      prev.map((proc) => (proc.id === id ? { ...proc, is_active: checked } : proc))
+    );
+    try {
+      await apiClient.put(`/processes/${id}`, { is_active: checked });
+    } catch (error) {
+      console.error('[ProcessMonitorCard] Failed to update process', error);
+      fetchProcesses();
+    }
+  };
+
+  const handleRemove = async (id: number) => {
+    try {
+      await apiClient.delete(`/processes/${id}`);
+      setProcesses((prev) => prev.filter((proc) => proc.id !== id));
+    } catch (error) {
+      console.error('[ProcessMonitorCard] Failed to delete process', error);
+    }
+  };
+
+  const handleCreate = async (processName: string) => {
+    try {
+      const payload = {
+        process_name: processName,
+        profile_filename: 'aurora_sync',
+        is_active: true,
+        priority: 0
+      };
+      const created = await apiClient.post<ProcessEntry>('/processes', payload);
+      setProcesses((prev) => [...prev, created]);
+    } catch (error) {
+      console.error('[ProcessMonitorCard] Failed to create process', error);
+    }
   };
 
   const handleAdd = () => {
@@ -72,11 +112,7 @@ const ProcessMonitorCard: React.FC<ProcessMonitorCardProps> = ({ disabled }) => 
             handler: (data) => {
               const value = (data?.processName ?? '').trim();
               if (value) {
-                const nextId = Math.max(0, ...processes.map((proc) => proc.id)) + 1;
-                setProcesses((prev) => [
-                  ...prev,
-                  { id: nextId, processName: value, enabled: true }
-                ]);
+                handleCreate(value);
               }
               setIsAlertOpen(false);
             }
@@ -85,14 +121,19 @@ const ProcessMonitorCard: React.FC<ProcessMonitorCardProps> = ({ disabled }) => 
         onDidDismiss={() => setIsAlertOpen(false)}
       />
       <IonList inset>
+        {!processes.length && isLoading && (
+          <IonItem lines="none">
+            <IonLabel>Loading processes…</IonLabel>
+          </IonItem>
+        )}
         {processes.map((proc) => (
           <IonItem key={proc.id}>
             <IonLabel>
-              <h3>{proc.processName}</h3>
+              <h3>{proc.process_name}</h3>
               <p>Passthrough when running</p>
             </IonLabel>
             <IonToggle
-              checked={proc.enabled}
+              checked={proc.is_active}
               onIonChange={(event) => handleToggle(proc.id, event.detail.checked)}
               disabled={disabled}
             />

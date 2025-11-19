@@ -1,25 +1,74 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { IonItem, IonLabel, IonSelect, IonSelectOption } from '@ionic/react';
 import LayerCard from '../../shared/LayerCard';
+import { apiClient } from '../../../config/api';
 import './AudioFxCard.css';
 
 type AudioFxCardProps = {
   disabled?: boolean;
 };
 
-const AudioFxCard: React.FC<AudioFxCardProps> = ({ disabled }) => {
-  const [enabled, setEnabled] = useState(true);
-  const [mode, setMode] = useState<'Ripple' | 'Rows (EQ)'>('Ripple');
-  const [source, setSource] = useState<'Windows Audio' | 'Microphone' | 'Both'>('Windows Audio');
+type AudioConfig = {
+  enabled?: boolean;
+  mode?: 'Ripple' | 'Rows (EQ)';
+  source?: 'Windows Audio' | 'Microphone' | 'Both';
+};
 
-  const controlsDisabled = disabled || !enabled;
+const DEFAULT_CONFIG: AudioConfig = {
+  enabled: true,
+  mode: 'Ripple',
+  source: 'Windows Audio'
+};
+
+const AudioFxCard: React.FC<AudioFxCardProps> = ({ disabled }) => {
+  const [enabled, setEnabled] = useState(DEFAULT_CONFIG.enabled!);
+  const [mode, setMode] = useState<AudioConfig['mode']>(DEFAULT_CONFIG.mode);
+  const [source, setSource] = useState<AudioConfig['source']>(DEFAULT_CONFIG.source);
+  const [loading, setLoading] = useState(true);
+  const widgetId = 'fx_audio';
+
+  const controlsDisabled = disabled || !enabled || loading;
+
+  const persist = async (next: AudioConfig) => {
+    const merged = {
+      enabled,
+      mode,
+      source,
+      ...next
+    };
+    setEnabled(Boolean(merged.enabled));
+    if (merged.mode) setMode(merged.mode);
+    if (merged.source) setSource(merged.source);
+    try {
+      await apiClient.post(`/api/widgets/${widgetId}`, { config: merged });
+    } catch (error) {
+      console.error('[AudioFxCard] Failed to persist config', error);
+    }
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const response = await apiClient.get<{ config: AudioConfig }>(`/api/widgets/${widgetId}`);
+        const cfg = response.config || {};
+        setEnabled(cfg.enabled ?? DEFAULT_CONFIG.enabled!);
+        setMode(cfg.mode ?? DEFAULT_CONFIG.mode);
+        setSource(cfg.source ?? DEFAULT_CONFIG.source);
+      } catch (error) {
+        console.error('[AudioFxCard] Failed to load config', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   return (
     <LayerCard
       title="Audio Reactive FX"
       description="Lock animations to music or ambient audio."
       toggleState={enabled}
-      onToggle={setEnabled}
+      onToggle={(checked) => persist({ enabled: checked })}
       disabled={disabled}
     >
       <IonItem lines="none" className="audio-card__item">
@@ -27,7 +76,7 @@ const AudioFxCard: React.FC<AudioFxCardProps> = ({ disabled }) => {
         <IonSelect
           interface="popover"
           value={mode}
-          onIonChange={(event) => setMode(event.detail.value)}
+          onIonChange={(event) => persist({ mode: event.detail.value })}
           disabled={controlsDisabled}
         >
           <IonSelectOption value="Ripple">Ripple</IonSelectOption>
@@ -39,7 +88,7 @@ const AudioFxCard: React.FC<AudioFxCardProps> = ({ disabled }) => {
         <IonSelect
           interface="popover"
           value={source}
-          onIonChange={(event) => setSource(event.detail.value)}
+          onIonChange={(event) => persist({ source: event.detail.value })}
           disabled={controlsDisabled}
         >
           <IonSelectOption value="Windows Audio">Windows Audio</IonSelectOption>

@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
@@ -10,6 +11,9 @@ app.use(express.json());
 console.log('[Server] Initializing Frida proxy...');
 require('./frida/proxy.js');
 require('./daemons/godModeDirector');
+// ...
+require('./daemons/weatherMonitor');
+// ...
 // require('./daemons/timeOfDay.js');
 // require('./daemons/processMonitor');
 // -------------------------
@@ -26,6 +30,11 @@ function registerRoutes(directory) {
     if (!entry.name.endsWith(".js")) return;
     try {
       const routeModule = require(fullPath);
+      if (typeof routeModule === "function") {
+        app.use(routeModule);
+        console.log(`[API] Mounted router from ${fullPath}`);
+        return;
+      }
       if (!routeModule || !routeModule.method || !routeModule.route || typeof routeModule.handler !== "function") {
         console.warn(`[API] Skipping ${fullPath}: missing contract {method, route, handler}`);
         return;
@@ -51,8 +60,8 @@ if (fs.existsSync(apiDir)) {
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
-const portArg = process.argv[2] ? Number(process.argv[2]) : undefined;
-const port = Number.isFinite(portArg) && portArg > 0 ? portArg : process.env.PORT || 3005;
+const rawPort = process.env.PORT || process.argv[2] || 3005;
+const port = Number(rawPort) || 3005;
 app.listen(port, () => {
   console.log(`Lighting automation backend listening on port ${port}`);
 });
