@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   IonContent,
   IonHeader,
@@ -22,18 +22,71 @@ import ProgressBarCard from '../components/settings/cards/ProgressBarCard';
 import SafetyMonitorCard from '../components/settings/cards/SafetyMonitorCard';
 import TypingFxCard from '../components/settings/cards/TypingFxCard';
 import AudioFxCard from '../components/settings/cards/AudioFxCard';
+import { apiClient } from '../config/api';
 import './Settings.css';
 
+const settingsSupports = {
+  safetyMonitor: false,
+  audioFx: false
+};
+
 const Settings: React.FC = () => {
-  const [isGodModeEnabled, setIsGodModeEnabled] = useState(true);
-  const [zipCode, setZipCode] = useState('94103');
+  const [isGodModeEnabled, setIsGodModeEnabled] = useState(false);
+  const [zipCode, setZipCode] = useState('');
+  const [loadingState, setLoadingState] = useState(true);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchState = async () => {
+    try {
+      const data = await apiClient.get<{
+        active?: boolean;
+        weatherSettings?: { zipCode?: string };
+      }>('/api/godmode/state');
+      setIsGodModeEnabled(Boolean(data.active));
+      setZipCode(data.weatherSettings?.zipCode ?? '');
+    } catch (error) {
+      console.error('[Settings] Failed to load God Mode state', error);
+    } finally {
+      setLoadingState(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchState();
+    const interval = setInterval(fetchState, 5000);
+    return () => {
+      clearInterval(interval);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  const handleMasterToggle = async (checked: boolean) => {
+    setIsGodModeEnabled(checked);
+    try {
+      await apiClient.post('/api/godmode', { command: checked ? 'enable' : 'disable' });
+    } catch (error) {
+      console.error('[Settings] Failed to toggle God Mode', error);
+    } finally {
+      fetchState();
+    }
+  };
+
+  const globalDisabled = !isGodModeEnabled;
 
   const handleZipChange = (event: InputCustomEvent<InputChangeEventDetail>) => {
     const value = event.detail.value ?? '';
     setZipCode(value);
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      apiClient.post('/api/godmode/state', {
+        weatherSettings: { zipCode: value }
+      }).catch((error) => {
+        console.error('[Settings] Failed to update Zip Code', error);
+      });
+    }, 600);
   };
-
-  const globalDisabled = !isGodModeEnabled;
 
   return (
     <IonPage>
@@ -47,7 +100,8 @@ const Settings: React.FC = () => {
             <span className="godmode-label">God Mode</span>
             <IonToggle
               checked={isGodModeEnabled}
-              onIonChange={(event) => setIsGodModeEnabled(event.detail.checked)}
+              onIonChange={(event) => handleMasterToggle(event.detail.checked)}
+              disabled={loadingState}
             />
           </div>
         </IonToolbar>
@@ -72,9 +126,9 @@ const Settings: React.FC = () => {
         <DayBarCard disabled={globalDisabled} />
         <TemperatureCard disabled={globalDisabled} />
         <ProgressBarCard disabled={globalDisabled} />
-        <SafetyMonitorCard disabled={globalDisabled} />
+        <SafetyMonitorCard disabled={globalDisabled || !settingsSupports.safetyMonitor} />
         <TypingFxCard disabled={globalDisabled} />
-        <AudioFxCard disabled={globalDisabled} />
+        <AudioFxCard disabled={globalDisabled || !settingsSupports.audioFx} />
       </IonContent>
     </IonPage>
   );

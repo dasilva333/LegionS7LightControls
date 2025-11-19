@@ -28,14 +28,10 @@ async function fetchWeather() {
     try {
         const currentState = await getGodModeState();
         
-        // Check if zip is configured in the DB state
         const zip = currentState.weatherSettings?.zipCode;
         const country = currentState.weatherSettings?.country || 'us';
 
-        if (!zip) {
-            // Silent return if not configured yet
-            return;
-        }
+        if (!zip) return;
 
         const url = `${BASE_URL}?zip=${zip},${country}&appid=${API_KEY}&units=metric`;
         const response = await axios.get(url);
@@ -44,35 +40,34 @@ async function fetchWeather() {
         const weatherId = data.weather[0].id;
         const condition = mapWeatherCondition(weatherId);
         const tempC = data.main.temp;
-        // Convert to F if you prefer, or keep C and let frontend handle display
-        // const tempF = (tempC * 9/5) + 32; 
 
         console.log(`[WeatherDaemon] ${data.name}: ${data.weather[0].main} (${condition}) | Temp: ${tempC}°C`);
 
-        // 1. Update DB
+        // --- FIX: Use Flat Schema ---
+        // weather: 'RAIN' (String), NOT { condition: 'RAIN' }
+        
+        const currentWidgets = currentState.widgets || {};
+
         await mergeGodModeState({
-            weather: {
-                condition: condition,
-                stormOverride: currentState.weather.stormOverride,
-                dedicatedKeys: currentState.weather.dedicatedKeys
-            },
+            weather: condition, // Save as String
             widgets: {
-                ...currentState.widgets,
+                ...currentWidgets,
                 temperature: {
-                    ...currentState.widgets.temperature,
+                    ...currentWidgets.temperature,
                     value: tempC
                 }
             }
         });
 
-        // 2. Sync Frida immediately
+        // Sync Frida
         await sendCommand('updateState', { 
-            weather: { condition }, 
+            weather: condition, 
             widgets: { temperature: { value: tempC } } 
         });
 
     } catch (error) {
-        console.error('[WeatherDaemon] Error:', error.response?.data?.message || error.message);
+        const msg = error.response?.data?.message || error.message;
+        console.error('[WeatherDaemon] Error:', msg);
     }
 }
 

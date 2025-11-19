@@ -1,4 +1,5 @@
 'use strict';
+const { DEFAULT_GODMODE_STATE } = require('../services/godmodeConfigStore');
 
 const path = require('path');
 const fs = require('fs');
@@ -33,6 +34,9 @@ function buildAgentScript() {
     // We replace the placeholder /* __KEY_GROUPS__ */ [] with the actual JSON
     script = script.replace('/* __KEY_GROUPS__ */ []', JSON.stringify(KEY_GROUPS));
     
+     // --- NEW: Initial State Injection ---
+    script = script.replace('/* __INITIAL_STATE__ */ {}', JSON.stringify(DEFAULT_GODMODE_STATE));
+
     // Debug write
     fs.writeFileSync(path.join(__dirname, 'temp_agent.js'), script);
     

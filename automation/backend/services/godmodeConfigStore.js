@@ -19,7 +19,10 @@ const DEFAULT_GODMODE_STATE = {
   },
   stormOverride: false,
   weatherEnabled: true,
-  weatherKeys: []
+  weatherKeys: [],
+  weatherSettings: {
+    zipCode: ''
+  }
 };
 
 async function readRow() {
