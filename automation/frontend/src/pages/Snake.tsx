@@ -13,6 +13,7 @@ import {
 import { play, refresh, cloudUploadOutline } from 'ionicons/icons';
 import io, { Socket } from 'socket.io-client';
 import { API_BASE_URL } from '../config/api';
+import KEY_GROUPS from '../fixtures/keyGroups.json'; // Import Fixture
 import './Snake.css';
 
 // Game Constants
@@ -23,12 +24,26 @@ const SPEED = 200;
 type Coordinate = [number, number];
 type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
 
+// --- 1. Pre-Calculate Valid Spawn Points ---
+// We flatten the key groups into a list of [row, col] pairs that actually have keys.
+const VALID_COORDS: Coordinate[] = [];
+KEY_GROUPS.forEach(group => {
+    group.keys.forEach(k => {
+        VALID_COORDS.push([k.row, k.col]);
+    });
+});
+
+// Helper to check if a coordinate is in the valid list (for movement validation if we wanted strict mode)
+// For now, we only strictly enforce FOOD spawning. Snake can move through empty space (void).
+
 const INITIAL_SNAKE: Coordinate[] = [
     [3, 5],
     [3, 4],
     [3, 3]
 ];
-const INITIAL_FOOD: Coordinate = [3, 15];
+// Ensure initial food is valid
+const INITIAL_FOOD: Coordinate = VALID_COORDS.find(c => c[0] === 3 && c[1] === 15) || VALID_COORDS[Math.floor(Math.random() * VALID_COORDS.length)];
+
 const INITIAL_DIRECTION: Direction = 'RIGHT';
 
 const Snake: React.FC = () => {
@@ -60,12 +75,10 @@ const Snake: React.FC = () => {
     // Handle Input
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Auto-start if not playing and not game over
             if (!isPlaying && !gameOver) {
                 const validKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
                 if (validKeys.includes(e.key)) {
                     setIsPlaying(true);
-                    // Don't return, let the key press register for direction
                 } else {
                     return;
                 }
@@ -101,7 +114,7 @@ const Snake: React.FC = () => {
             const head = prevSnake[0];
             const newHead: Coordinate = [...head];
             const currentDir = directionRef.current;
-            setDirection(currentDir); // Update state for UI if needed
+            setDirection(currentDir); 
 
             switch (currentDir) {
                 case 'UP': newHead[0] -= 1; break;
@@ -110,7 +123,7 @@ const Snake: React.FC = () => {
                 case 'RIGHT': newHead[1] += 1; break;
             }
 
-            // Check Wall Collision
+            // Check Wall Collision (Grid Boundaries)
             if (
                 newHead[0] < 0 || newHead[0] >= ROWS ||
                 newHead[1] < 0 || newHead[1] >= COLS
@@ -147,20 +160,23 @@ const Snake: React.FC = () => {
 
             // Check Food Collision
             if (newHead[0] === food[0] && newHead[1] === food[1]) {
-                // Generate new food
+                // Generate new food ONLY on Valid Keys
                 let newFood: Coordinate;
+                let attempts = 0;
                 do {
-                    newFood = [
-                        Math.floor(Math.random() * ROWS),
-                        Math.floor(Math.random() * COLS)
-                    ];
-                } while (newSnake.some(segment => segment[0] === newFood[0] && segment[1] === newFood[1]));
+                    // Pick random index from valid list
+                    const idx = Math.floor(Math.random() * VALID_COORDS.length);
+                    newFood = VALID_COORDS[idx];
+                    attempts++;
+                } while (
+                    newSnake.some(segment => segment[0] === newFood[0] && segment[1] === newFood[1]) && 
+                    attempts < 100
+                );
                 setFood(newFood);
             } else {
-                newSnake.pop(); // Remove tail
+                newSnake.pop(); 
             }
 
-            // Sync to Backend
             if (isSyncing && socketRef.current) {
                 socketRef.current.emit('snake:frame', {
                     snake: newSnake,
@@ -186,7 +202,6 @@ const Snake: React.FC = () => {
         };
     }, [isPlaying, gameOver, moveSnake]);
 
-    // Cleanup on leave
     useIonViewWillLeave(() => {
         setIsPlaying(false);
         if (gameLoopRef.current) clearInterval(gameLoopRef.current);
@@ -194,7 +209,7 @@ const Snake: React.FC = () => {
 
     const startGame = () => {
         setSnake(INITIAL_SNAKE);
-        setFood(INITIAL_FOOD);
+        setFood(INITIAL_FOOD); // Will be valid
         setDirection(INITIAL_DIRECTION);
         directionRef.current = INITIAL_DIRECTION;
         setGameOver(false);
@@ -205,11 +220,13 @@ const Snake: React.FC = () => {
         setIsSyncing(!isSyncing);
     };
 
-    // Render Helpers
     const getCellClass = (r: number, c: number) => {
         const isHead = snake[0][0] === r && snake[0][1] === c;
         const isBody = snake.some((s, i) => i !== 0 && s[0] === r && s[1] === c);
         const isFood = food[0] === r && food[1] === c;
+
+        // Optional: Add visual indicator for "Void" cells in UI?
+        // For now, keep grid simple.
 
         if (isHead) return 'snake-cell snake-head';
         if (isBody) return 'snake-cell snake-body';

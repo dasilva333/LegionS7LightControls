@@ -32,17 +32,17 @@ function initSnakeSocket(io) {
     });
 
     // Log state every 5 seconds
-    // setInterval(() => {
-    //     if (snakeGameState.isPlaying || (Date.now() - snakeGameState.lastUpdated < 10000)) {
-    //     console.log('\n--- [Snake Game State Log] ---');
-    //     console.log(`Playing: ${snakeGameState.isPlaying}`);
-    //     console.log(`Game Over: ${snakeGameState.gameOver}`);
-    //     console.log(`Snake Length: ${snakeGameState.snake ? snakeGameState.snake.length : 0}`);
-    //     console.log(`Head Pos: ${snakeGameState.snake && snakeGameState.snake.length > 0 ? JSON.stringify(snakeGameState.snake[0]) : 'N/A'}`);
-    //     console.log(`Food Pos: ${JSON.stringify(snakeGameState.food)}`);
-    //     console.log('------------------------------\n');
-    //     }
-    // }, 5000);
+    setInterval(() => {
+        if (snakeGameState.isPlaying) {
+        console.log('\n--- [Snake Game State Log] ---');
+        console.log(`Playing: ${snakeGameState.isPlaying}`);
+        console.log(`Game Over: ${snakeGameState.gameOver}`);
+        console.log(`Snake Length: ${snakeGameState.snake ? snakeGameState.snake.length : 0}`);
+        console.log(`Head Pos: ${snakeGameState.snake && snakeGameState.snake.length > 0 ? JSON.stringify(snakeGameState.snake[0]) : 'N/A'}`);
+        console.log(`Food Pos: ${JSON.stringify(snakeGameState.food)}`);
+        console.log('------------------------------\n');
+        }
+    }, 1000);
 }
 
 module.exports = { initSnakeSocket };

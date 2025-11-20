@@ -478,23 +478,11 @@ function layerSnakeGame(state, pos, tick, color, color_math) {
     }
 
     // Check Food (with pulse effect)
+    // Check Food
     if (isAt(food)) {
-        // Pulse logic: sin wave based on tick
-        // tick is roughly ms or frame count? Assuming frame count or time.
-        // Let's assume tick is incrementing.
-        const pulse = (Math.sin(tick / 10) + 1) / 2; // 0 to 1
-        const r = Math.floor(150 + (105 * pulse)); // Pulse between 150 and 255
-        return { r: r, g: 0, b: 0 };
+        // Force solid red to verify mapping first
+        return { r: 255, g: 0, b: 0 };
     }
-
-    // Background for game area (optional, maybe dim the rest?)
-    // For now, return null to let lower layers (like background) show through 
-    // OR return black to clear the board?
-    // The spec says "If a key is not part of the game, it returns the currentColor from the layers below it."
-    // BUT, if we want the game to be clear, we might want to black out the game grid area if it's not a snake/food.
-    // However, the user said "If a key is *not* part of the game, it returns the currentColor from the layers below it."
-    // Wait, the user said: "If active, it **overrides** the `currentColor`... If a key is *not* part of the game, it returns the `currentColor` from the layers below it."
-    // This implies transparency for non-game keys.
 
     return null;
 }
