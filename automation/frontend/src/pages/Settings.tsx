@@ -9,7 +9,10 @@ import {
   IonTitle,
   IonToggle,
   IonToolbar,
-  InputChangeEventDetail
+  InputChangeEventDetail,
+  IonGrid,
+  IonRow,
+  IonCol
 } from '@ionic/react';
 import { InputCustomEvent } from '@ionic/react';
 import BackgroundCard from '../components/settings/cards/BackgroundCard';
@@ -118,16 +121,65 @@ const Settings: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen className="ion-padding">
-        <BackgroundCard disabled={globalDisabled} />
-        <WeatherCard disabled={globalDisabled} />
-        <ProcessMonitorCard disabled={globalDisabled} />
-        <ShortcutsCard disabled={globalDisabled} />
-        <DayBarCard disabled={globalDisabled} />
-        <TemperatureCard disabled={globalDisabled} />
-        <ProgressBarCard disabled={globalDisabled} />
-        {/* <SafetyMonitorCard disabled={globalDisabled || !settingsSupports.safetyMonitor} /> */}
-        <TypingFxCard disabled={globalDisabled} />
-        <AudioFxCard disabled={globalDisabled || !settingsSupports.audioFx} />
+        <IonGrid>
+          {/* Row 1: Background */}
+          <IonRow>
+            <IonCol size="12">
+              <BackgroundCard disabled={globalDisabled} />
+            </IonCol>
+          </IonRow>
+
+          {/* Row 2: Weather / Process */}
+          <IonRow>
+            <IonCol size="12" sizeLg="6">
+              <WeatherCard disabled={globalDisabled} />
+            </IonCol>
+            <IonCol size="12" sizeLg="6">
+              <ProcessMonitorCard disabled={globalDisabled} />
+            </IonCol>
+          </IonRow>
+
+          {/* Row 3: Day Bar / Temp */}
+          <IonRow>
+            <IonCol size="12" sizeLg="6">
+              <DayBarCard disabled={globalDisabled} />
+            </IonCol>
+            <IonCol size="12" sizeLg="6">
+              <TemperatureCard disabled={globalDisabled} />
+            </IonCol>
+          </IonRow>
+
+          {/* Row 4: Typing / Audio */}
+          <IonRow>
+            <IonCol size="12" sizeLg="6">
+              <TypingFxCard disabled={globalDisabled} />
+            </IonCol>
+            <IonCol size="12" sizeLg="6">
+              <AudioFxCard disabled={globalDisabled || !settingsSupports.audioFx} />
+            </IonCol>
+          </IonRow>
+
+          {/* Row 5: Progress Bar */}
+          <IonRow>
+            <IonCol size="12">
+              <ProgressBarCard disabled={globalDisabled} />
+            </IonCol>
+          </IonRow>
+
+          {/* Row 6: Shortcuts */}
+          <IonRow>
+            <IonCol size="12">
+              <ShortcutsCard disabled={globalDisabled} />
+            </IonCol>
+          </IonRow>
+
+          {/* Safety Monitor (Hidden/Commented) */}
+          {/* <IonRow>
+            <IonCol size="12">
+              <SafetyMonitorCard disabled={globalDisabled || !settingsSupports.safetyMonitor} />
+            </IonCol>
+          </IonRow> */}
+        </IonGrid>
       </IonContent>
     </IonPage>
   );

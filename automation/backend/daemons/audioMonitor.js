@@ -11,6 +11,7 @@ let currentSensitivity = 3.5;
 let currentDecay = 0.15;
 
 let currentPeak = 0;
+let silenceTimeout = null;
 
 function getAudioDevice(targetSource) {
     const devices = portAudio.getDevices();
@@ -88,6 +89,13 @@ async function startAudio(sourceType) {
             // Send to Frida
             if (currentPeak > 0.01) {
                 sendCommand('updateState', { fx: { audioPeak: currentPeak } }).catch(() => { });
+
+                // Reset silence timeout
+                if (silenceTimeout) clearTimeout(silenceTimeout);
+                silenceTimeout = setTimeout(() => {
+                    currentPeak = 0;
+                    sendCommand('updateState', { fx: { audioPeak: 0 } }).catch(() => { });
+                }, 2000);
             }
         });
 

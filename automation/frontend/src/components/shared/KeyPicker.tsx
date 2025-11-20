@@ -12,7 +12,8 @@ import {
   IonNote,
   IonTitle,
   IonToolbar,
-  IonItem
+  IonItem,
+  IonSearchbar
 } from '@ionic/react';
 import keyGroups from '../../fixtures/keyGroups.json';
 import './KeyPicker.css';
@@ -49,6 +50,7 @@ const KeyPicker: React.FC<KeyPickerProps> = ({
   helperText
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchText, setSearchText] = useState('');
   const [pendingSelection, setPendingSelection] = useState<number[]>(() => normalizeValue(value, multiple));
 
   const normalizedValue = useMemo(() => normalizeValue(value, multiple), [value, multiple]);
@@ -64,8 +66,42 @@ const KeyPicker: React.FC<KeyPickerProps> = ({
   useEffect(() => {
     if (!isOpen) {
       setPendingSelection(normalizedValue);
+      setSearchText(''); // Reset search when closing/opening
     }
   }, [normalizedValue, isOpen]);
+
+  // Filter and Group Logic
+  const { selectedKeys, availableGroups } = useMemo(() => {
+    const lowerSearch = searchText.toLowerCase();
+    const selected: any[] = [];
+    const available: any[] = [];
+    const selectedIds = new Set(pendingSelection);
+
+    keyGroups.forEach(group => {
+      const groupMatches = group.group_name.toLowerCase().includes(lowerSearch);
+      const availableKeysInGroup: any[] = [];
+
+      group.keys.forEach(key => {
+        const keyMatches = key.key_name.toLowerCase().includes(lowerSearch);
+        const isMatch = !searchText || groupMatches || keyMatches;
+        const isSelected = selectedIds.has(key.id);
+
+        if (isSelected) {
+          if (isMatch) {
+            selected.push({ ...key, group_name: group.group_name });
+          }
+        } else if (isMatch) {
+          availableKeysInGroup.push(key);
+        }
+      });
+
+      if (availableKeysInGroup.length > 0) {
+        available.push({ ...group, keys: availableKeysInGroup });
+      }
+    });
+
+    return { selectedKeys: selected, availableGroups: available };
+  }, [pendingSelection, searchText]);
 
   const selectedCount = normalizedValue.length;
   let buttonLabel = 'Select Keys';
@@ -123,26 +159,65 @@ const KeyPicker: React.FC<KeyPickerProps> = ({
               <IonButton onClick={handleDone}>Done</IonButton>
             </IonButtons>
           </IonToolbar>
+          <IonToolbar>
+            <IonSearchbar
+              value={searchText}
+              onIonInput={e => setSearchText(e.detail.value!)}
+              placeholder="Search keys or groups..."
+              debounce={300}
+            />
+          </IonToolbar>
         </IonHeader>
         <IonContent>
           <IonList>
-            {keyGroups.map((group) => (
+            {/* Selected Keys Section */}
+            {selectedKeys.length > 0 && (
+              <>
+                <IonListHeader>
+                  <IonLabel color="primary">Selected ({selectedKeys.length})</IonLabel>
+                </IonListHeader>
+                {selectedKeys.map((key) => (
+                  <IonItem key={key.id}>
+                    <IonLabel>
+                      {key.key_name}
+                      <IonNote slot="end" style={{ fontSize: '0.8em', marginRight: '8px' }}>
+                        {key.group_name}
+                      </IonNote>
+                    </IonLabel>
+                    <IonCheckbox
+                      slot="end"
+                      checked={true}
+                      onIonChange={() => handleToggle(key.id)}
+                    />
+                  </IonItem>
+                ))}
+              </>
+            )}
+
+            {/* Available Groups Section */}
+            {availableGroups.map((group) => (
               <React.Fragment key={group.group_name}>
                 <IonListHeader>
                   <IonLabel>{group.group_name}</IonLabel>
                 </IonListHeader>
-                {group.keys.map((key) => (
+                {group.keys.map((key: any) => (
                   <IonItem key={key.id}>
                     <IonLabel>{key.key_name}</IonLabel>
                     <IonCheckbox
                       slot="end"
-                      checked={pendingSelection.includes(key.id)}
+                      checked={false}
                       onIonChange={() => handleToggle(key.id)}
                     />
                   </IonItem>
                 ))}
               </React.Fragment>
             ))}
+
+            {selectedKeys.length === 0 && availableGroups.length === 0 && (
+              <div className="ion-padding ion-text-center">
+                <IonNote>No keys found matching &quot;{searchText}&quot;</IonNote>
+              </div>
+            )}
           </IonList>
         </IonContent>
       </IonModal>
