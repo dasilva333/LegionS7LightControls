@@ -42,6 +42,7 @@ type GradientResponse = {
 
 type GodModeStateResponse = {
   backgroundMode?: Mode;
+  timeOfDay?: number;
   // Removed timeUpdateRate from root, kept in effectSettings if needed
   effectSettings?: {
     effectType?: string;
@@ -53,13 +54,14 @@ type GodModeStateResponse = {
 
 const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
   const [mode, setMode] = useState<Mode>("none");
-  
+  const [timeOfDay, setTimeOfDay] = useState<number>(0);
+
   // Effect Settings
   const [effectType, setEffectType] = useState<EffectType>("Solid");
   const [colorSource, setColorSource] = useState<ColorSource>("Static");
   const [effectSpeed, setEffectSpeed] = useState(3);
   const [baseColor, setBaseColor] = useState("#0070FF");
-  
+
   // Time Gradient Data
   const [gradients, setGradients] = useState<GradientResponse[]>([]);
   const [isLoadingState, setIsLoadingState] = useState(true);
@@ -67,7 +69,7 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
 
   const effectTypes: EffectType[] = ["Solid", "Ripple", "Wave", "Fade", "Checkerboard", "Sonar", "Raindrops", "Heatmap"];
   const colorSources: ColorSource[] = ["Static", "Time of Day", "Spectrum"];
-  
+
   const controlsDisabled = disabled || isLoadingState;
 
   const normalizeGradient = (gradient: GradientResponse) => ({
@@ -81,20 +83,21 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
   const fetchState = async () => {
     try {
       const data = await apiClient.get<GodModeStateResponse>("/api/godmode/state");
-      
+
       // Migrate old 'time' mode to 'effect' mode with source 'Time of Day'
       let bgMode = data.backgroundMode;
-      if (bgMode as any === 'time') bgMode = 'effect'; 
+      if (bgMode as any === 'time') bgMode = 'effect';
       if (bgMode) setMode(bgMode);
+      if (typeof data.timeOfDay === 'number') setTimeOfDay(data.timeOfDay);
 
       const fx = data.effectSettings || {};
       if (fx.effectType) setEffectType(fx.effectType as EffectType);
       if (fx.colorSource) setColorSource(fx.colorSource as ColorSource);
-      
+
       // If migrating from old Time Mode, force settings
       if (data.backgroundMode as any === 'time') {
-          setEffectType('Solid');
-          setColorSource('Time of Day');
+        setEffectType('Solid');
+        setColorSource('Time of Day');
       }
 
       if (typeof fx.speed === "number") setEffectSpeed(fx.speed);
@@ -125,19 +128,19 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
   const persistState = async (partial: Record<string, unknown>) => {
     // Always ensure we are saving the full effect object to avoid partial overwrites
     const currentEffectSettings = {
-        effectType,
-        colorSource,
-        baseColor,
-        speed: effectSpeed
+      effectType,
+      colorSource,
+      baseColor,
+      speed: effectSpeed
     };
-    
+
     // If partial contains effectSettings, merge it
     const mergedSettings = { ...currentEffectSettings, ...(partial.effectSettings as object) };
 
     try {
       await apiClient.post("/api/godmode/state", {
-          ...partial,
-          effectSettings: mergedSettings
+        ...partial,
+        effectSettings: mergedSettings
       });
     } catch (error) {
       console.error("[BackgroundCard] Failed to update state", error);
@@ -180,26 +183,54 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
     return `${formattedHour}:${minutes} ${ampm}`;
   };
 
+  const isGradientActive = (gradient: GradientResponse) => {
+    if (!gradient.startTime || !gradient.endTime) return false;
+
+    const parseTime = (t: string) => {
+      const [h, m] = t.split(':').map(Number);
+      return (h * 60 + m) / (24 * 60);
+    };
+
+    const start = parseTime(gradient.startTime);
+    const end = parseTime(gradient.endTime);
+    const current = timeOfDay;
+
+    // Handle wrapping (e.g. 23:00 to 02:00)
+    if (start <= end) {
+      return current >= start && current < end;
+    } else {
+      return current >= start || current < end;
+    }
+  };
+
   const renderGradientsList = () => (
     <IonList inset style={{ marginTop: '16px' }}>
-        <IonListHeader>
-          <IonLabel>Time of Day Schedule</IonLabel>
-        </IonListHeader>
+      <IonListHeader>
+        <IonLabel>Time of Day Schedule</IonLabel>
+      </IonListHeader>
 
-        {isLoadingGradients && (
-          <IonItem lines="none">
-            <IonText color="medium">Loading gradients…</IonText>
-          </IonItem>
-        )}
+      {isLoadingGradients && (
+        <IonItem lines="none">
+          <IonText color="medium">Loading gradients…</IonText>
+        </IonItem>
+      )}
 
-        {!isLoadingGradients &&
-          gradients.map((gradient) => (
-            <IonItem key={gradient.id} className="gradient-item">
+      {!isLoadingGradients &&
+        gradients.map((gradient) => {
+          const isActive = isGradientActive(gradient);
+          const activeBorderStyle = isActive ? {
+            border: '2px solid var(--ion-color-primary)',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(var(--ion-color-primary-rgb), 0.05)'
+          } : {};
+
+          return (
+            <IonItem key={gradient.id} className="gradient-item" style={activeBorderStyle}>
               <div style={{ minWidth: "90px", display: "flex", flexDirection: "column", gap: "4px" }}>
-                <IonText style={{ fontWeight: 600, fontSize: "0.9rem" }}>
+                <IonText color={isActive ? "primary" : "dark"} style={{ fontWeight: isActive ? 700 : 600, fontSize: "0.9rem" }}>
                   {formatTime(gradient.startTime || '')}
                 </IonText>
-                <IonText color="medium" style={{ fontSize: "0.8rem" }}>
+                <IonText color={isActive ? "primary" : "medium"} style={{ fontSize: "0.8rem", fontWeight: isActive ? 600 : 400 }}>
                   to {formatTime(gradient.endTime || '')}
                 </IonText>
               </div>
@@ -211,7 +242,8 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
                   margin: "0 16px",
                   borderRadius: "6px",
                   background: `linear-gradient(to right, ${gradient.startRgb}, ${gradient.endRgb})`,
-                  boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.15)",
+                  boxShadow: isActive ? "0 0 8px var(--ion-color-primary)" : "inset 0 0 0 1px rgba(255,255,255,0.15)",
+                  border: isActive ? "2px solid var(--ion-color-primary)" : "none"
                 }}
               />
 
@@ -220,10 +252,11 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
                 <IonIcon icon={trashOutline} slot="icon-only" />
               </IonButton>
             </IonItem>
-          ))}
-        <IonButton expand="block" fill="outline" className="ion-margin-top" disabled={controlsDisabled}>
-            + Add New Gradient
-        </IonButton>
+          )
+        })}
+      <IonButton expand="block" fill="outline" className="ion-margin-top" disabled={controlsDisabled}>
+        + Add New Gradient
+      </IonButton>
     </IonList>
   );
 
@@ -259,33 +292,33 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
 
       {/* Dynamic Color Controls based on Source */}
       {colorSource === "Static" && (
-          <IonItem lines="none">
-            <IonLabel>Base Color</IonLabel>
-            <ColorPicker
-              value={baseColor}
-              onChange={handleBaseColorChange}
-              disabled={controlsDisabled}
-            />
-          </IonItem>
+        <IonItem lines="none">
+          <IonLabel>Base Color</IonLabel>
+          <ColorPicker
+            value={baseColor}
+            onChange={handleBaseColorChange}
+            disabled={controlsDisabled}
+          />
+        </IonItem>
       )}
 
       {/* Speed Slider (Hidden for Solid Static, but shown for Solid+Spectrum or Wave) */}
       {(effectType !== 'Solid' || colorSource === 'Spectrum') && (
-          <IonItem>
-            <IonLabel>Speed</IonLabel>
-            <IonRange
-              pin
-              value={effectSpeed}
-              min={1}
-              max={5}
-              step={1}
-              onIonChange={(e) => handleEffectSpeedChange(Number(e.detail.value))}
-              disabled={controlsDisabled}
-            >
-              <IonLabel slot="start">Slow</IonLabel>
-              <IonLabel slot="end">Fast</IonLabel>
-            </IonRange>
-          </IonItem>
+        <IonItem>
+          <IonLabel>Speed</IonLabel>
+          <IonRange
+            pin
+            value={effectSpeed}
+            min={1}
+            max={5}
+            step={1}
+            onIonChange={(e) => handleEffectSpeedChange(Number(e.detail.value))}
+            disabled={controlsDisabled}
+          >
+            <IonLabel slot="start">Slow</IonLabel>
+            <IonLabel slot="end">Fast</IonLabel>
+          </IonRange>
+        </IonItem>
       )}
 
       {/* Show Gradient List only if Time of Day is selected */}
