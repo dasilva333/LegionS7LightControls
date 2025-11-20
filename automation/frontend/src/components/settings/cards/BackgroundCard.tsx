@@ -19,6 +19,7 @@ import LayerCard from "../../shared/LayerCard";
 import ColorPicker from "../../shared/ColorPicker";
 import { apiClient } from "../../../config/api";
 import { trashOutline } from "ionicons/icons";
+import GradientModal, { GradientData } from "../modals/GradientModal";
 
 type BackgroundCardProps = {
   disabled?: boolean;
@@ -66,6 +67,10 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
   const [gradients, setGradients] = useState<GradientResponse[]>([]);
   const [isLoadingState, setIsLoadingState] = useState(true);
   const [isLoadingGradients, setIsLoadingGradients] = useState(true);
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingGradient, setEditingGradient] = useState<GradientData | null>(null);
 
   const effectTypes: EffectType[] = ["Solid", "Ripple", "Wave", "Fade", "Checkerboard", "Sonar", "Raindrops", "Heatmap"];
   const colorSources: ColorSource[] = ["Static", "Time of Day", "Spectrum"];
@@ -173,6 +178,59 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
     persistState({ effectSettings: { baseColor: color } });
   };
 
+  const handleAddGradient = () => {
+    setEditingGradient(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEditGradient = (gradient: GradientResponse) => {
+    setEditingGradient({
+      id: gradient.id,
+      startTime: gradient.startTime || "09:00",
+      endTime: gradient.endTime || "17:00",
+      startRgb: gradient.startRgb || "#000000",
+      endRgb: gradient.endRgb || "#000000"
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleSaveGradient = async (data: GradientData) => {
+    try {
+      let updatedGradients = [...gradients];
+
+      // Convert to snake_case for backend
+      const payload = {
+        start_time: data.startTime,
+        end_time: data.endTime,
+        start_rgb: data.startRgb,
+        end_rgb: data.endRgb
+      };
+
+      if (data.id) {
+        // Update existing
+        await apiClient.put(`/time-gradients/${data.id}`, payload);
+        updatedGradients = updatedGradients.map(g =>
+          g.id === data.id ? { ...g, ...data } : g
+        );
+      } else {
+        // Create new
+        const newGradient = await apiClient.post<GradientResponse>("/time-gradients", payload);
+        updatedGradients.push(normalizeGradient(newGradient));
+      }
+
+      // Sort chronologically
+      updatedGradients.sort((a, b) => {
+        const timeA = a.startTime || "00:00";
+        const timeB = b.startTime || "00:00";
+        return timeA.localeCompare(timeB);
+      });
+
+      setGradients(updatedGradients);
+    } catch (error) {
+      console.error("Failed to save gradient", error);
+    }
+  };
+
   // --- Helper: Convert 24h "HH:MM" to 12h "h:MM AM/PM" ---
   const formatTime = (timeStr: string) => {
     if (!timeStr) return "";
@@ -247,14 +305,14 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
                 }}
               />
 
-              <IonButton size="small" fill="clear" disabled={controlsDisabled}>Edit</IonButton>
+              <IonButton size="small" fill="clear" disabled={controlsDisabled} onClick={() => handleEditGradient(gradient)}>Edit</IonButton>
               <IonButton size="small" fill="clear" color="danger" disabled={controlsDisabled}>
                 <IonIcon icon={trashOutline} slot="icon-only" />
               </IonButton>
             </IonItem>
           )
         })}
-      <IonButton expand="block" fill="outline" className="ion-margin-top" disabled={controlsDisabled}>
+      <IonButton expand="block" fill="outline" className="ion-margin-top" disabled={controlsDisabled} onClick={handleAddGradient}>
         + Add New Gradient
       </IonButton>
     </IonList>
@@ -352,6 +410,13 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
       )}
 
       {mode === "effect" && renderEffectContent()}
+
+      <GradientModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveGradient}
+        initialGradient={editingGradient}
+      />
     </LayerCard>
   );
 };
