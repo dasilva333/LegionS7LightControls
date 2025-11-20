@@ -65,9 +65,24 @@ if (fs.existsSync(apiDir)) {
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
+const http = require('http');
+const { Server } = require("socket.io");
+const { initSnakeSocket } = require('./socket/snakeHandler');
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
+// Initialize Snake Socket Handler
+initSnakeSocket(io);
+
 const rawPort = process.env.PORT || process.argv[2] || 3005;
 const port = Number(rawPort) || 3005;
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Lighting automation backend listening on port ${port}`);
 });
 

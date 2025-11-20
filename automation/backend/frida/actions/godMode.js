@@ -5,7 +5,7 @@
         // 1. Extract Context & Utils
         const { baseAddress, log, keyGroups, initialState } = context;
         const godMode = context.godMode || {};
-        
+
         // Verify we have the injected modules
         if (!godMode.utils || !godMode.layers) {
             log("[GodMode] CRITICAL ERROR: Modules not injected by loader.");
@@ -13,7 +13,7 @@
         }
 
         const { geometry, color_math } = godMode.utils;
-        
+
         // 2. Build Geometry Map
         const { KEY_MAP, NAME_TO_ID } = geometry.buildKeyMaps(keyGroups);
 
@@ -22,13 +22,13 @@
         log(`[DEBUG] Init: KeyGroups Length ${keyGroups ? keyGroups.length : 'NULL'}`);
         log(`[DEBUG] Init: KEY_MAP Size ${KEY_MAP.size}`);
         // Check Key 66 (Q) specifically as it's our test candidate
-        const debugKey = KEY_MAP.get(66);
-        log(`[DEBUG] Init: Key 66 lookup: ${debugKey ? JSON.stringify(debugKey) : 'UNDEFINED'}`);
+        // const debugKey = KEY_MAP.get(66);
+        // log(`[DEBUG] Init: Key 66 lookup: ${debugKey ? JSON.stringify(debugKey) : 'UNDEFINED'}`);
         // -------------------------
 
         // 3. Initialize State
         const state = JSON.parse(JSON.stringify(initialState));
-        
+
         // Ensure runtime structures exist
         state.alerts = [];
         state.__fxRuntime = { activeFades: new Map() };
@@ -49,15 +49,16 @@
             godMode.layers.layer4_interrupts,
             godMode.layers.layer5_fx
         ].filter(fn => typeof fn === 'function');
-        
-        log(`[DEBUG] Init: Active Layers: ${layerOrder.length}`);
+
+        log(`[DEBUG] Init: Active Layers: ${layerOrder.length}/${Object.keys(godMode.layers).length}`);
+        log(`[DEBUG] Layers Found ${JSON.stringify(Object.keys(godMode.layers))}`);
 
         // 5. Setup Hook
         const PRIMITIVE_RVA = 0x209b0;
         const HEADER_SIZE = 4;
         const BYTES_PER_KEY = 5;
         const BUFFER_SIZE = 960;
-        
+
         let tick = 0;
         let debuggedOnce = false; // Ensure we only log the loop once
 
@@ -76,7 +77,7 @@
 
                 if (dataPtr.readU8() === 0x07 && dataPtr.add(1).readU8() === 0xA1) {
                     tick++;
-                    
+
                     // --- DEBUG: FIRST FRAME ---
                     if (!debuggedOnce) {
                         log(`[DEBUG] Frame 1: Hook Triggered.`);
@@ -89,29 +90,36 @@
 
                     while (cursor < limit) {
                         const keyId = cursor.readU16();
-                        
+
                         if (keyId !== 0) {
                             const basePos = KEY_MAP.get(keyId);
-                            
+
                             if (basePos) {
-                                const pos = { ...basePos, keyId }; 
-                                
+                                const pos = { ...basePos, keyId };
+
                                 let color = { r: 0, g: 0, b: 0 };
 
                                 // Run Pipeline
-                                for (const layerFn of layerOrder) {
-                                    try {
-                                        const nextColor = layerFn(state, pos, tick, color, color_math);
-                                        
-                                        // --- DEBUG: TRACE KEY 66 ---
-                                        if (!debuggedOnce && keyId === 66) {
-                                            log(`[DEBUG] Key 66 Layer Result: ${JSON.stringify(nextColor)}`);
-                                        }
-                                        // ---------------------------
+                                if (state.snake && state.snake.isPlaying) {
+                                    // Snake Game Override
+                                    const snakeColor = godMode.layers.layer_snake(state, pos, tick, color, color_math);
+                                    if (snakeColor) color = snakeColor;
+                                } else {
+                                    // Standard Pipeline
+                                    for (const layerFn of layerOrder) {
+                                        try {
+                                            const nextColor = layerFn(state, pos, tick, color, color_math);
 
-                                        if (nextColor) color = nextColor;
-                                    } catch (e) {
-                                        if (!debuggedOnce) log(`[DEBUG] Layer Error: ${e.message}`);
+                                            // // --- DEBUG: TRACE KEY 66 ---
+                                            // if (!debuggedOnce && keyId === 66) {
+                                            //     log(`[DEBUG] Key 66 Layer Result: ${JSON.stringify(nextColor)}`);
+                                            // }
+                                            // ---------------------------
+
+                                            if (nextColor) color = nextColor;
+                                        } catch (e) {
+                                            if (!debuggedOnce) log(`[DEBUG] Layer Error: ${e.message}`);
+                                        }
                                     }
                                 }
 

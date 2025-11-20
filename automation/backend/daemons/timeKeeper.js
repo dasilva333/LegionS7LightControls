@@ -1,23 +1,30 @@
 const { mergeGodModeState } = require('../services/godmodeConfigStore');
 const { sendCommand } = require('../frida/proxy');
+const knex = require('../db/knex'); // Need knex
 
 const UPDATE_INTERVAL = 60 * 1000; // 1 Minute
 
 async function updateTime() {
+    // 1. Calculate time
     const now = new Date();
     const totalMinutes = (now.getHours() * 60) + now.getMinutes();
     const totalDayMinutes = 24 * 60;
     const timeOfDay = totalMinutes / totalDayMinutes;
 
-    // 1. Update DB (So Director loads correct time on restart)
-    // We don't need to await this if we don't want to block
-    mergeGodModeState({ timeOfDay }).catch(console.error);
-
-    // 2. Update Frida
-    sendCommand('updateState', { timeOfDay }).catch(() => {});
+    // 2. Fetch Gradient Schedule from DB
+    const gradients = await knex('time_gradients').where('is_active', true).orderBy('start_time');
+    
+    // 3. Persist and Sync
+    await mergeGodModeState({ timeOfDay });
+    
+    // Also send gradients to Frida for live interpolation
+    await sendCommand('updateState', { 
+        timeOfDay,
+        timeGradients: gradients 
+    });
 
     if (now.getMinutes() === 0) {
-        console.log(`[TimeKeeper] Sync: ${now.getHours()}:00 (${timeOfDay.toFixed(2)})`);
+        console.log(`[TimeKeeper] Sync: ${now.getHours()}:00`);
     }
 }
 
