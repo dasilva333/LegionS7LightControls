@@ -24,14 +24,34 @@ const SPEED = 200;
 type Coordinate = [number, number];
 type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
 
-// --- 1. Pre-Calculate Valid Spawn Points ---
-// We flatten the key groups into a list of [row, col] pairs that actually have keys.
-const VALID_COORDS: Coordinate[] = [];
+// --- 1. Pre-Calculate Mappings ---
+// VALID_GRID_CELLS: Every single grid coordinate that is visually covered by a key.
+// VIRTUAL_TO_ANCHOR: Maps a specific grid coordinate (e.g., row 5, col 9) to the Key's "Anchor" (row 5, col 6).
+
+const VALID_GRID_CELLS: Coordinate[] = [];
+const VIRTUAL_TO_ANCHOR = new Map<string, Coordinate>();
+
 KEY_GROUPS.forEach(group => {
-    group.keys.forEach(k => {
-        VALID_COORDS.push([k.row, k.col]);
+    group.keys.forEach((k: any) => { // Type as any to access width/height without strict interface changes
+        const width = k.width || 1;
+        const height = k.height || 1;
+
+        // Iterate over every grid cell this key occupies
+        for (let r = k.row; r < k.row + height; r++) {
+            for (let c = k.col; c < k.col + width; c++) {
+                // 1. Mark this cell as valid for game spawning
+                VALID_GRID_CELLS.push([r, c]);
+
+                // 2. Map this cell to the Key's defined Anchor position (what the backend expects)
+                VIRTUAL_TO_ANCHOR.set(`${r}-${c}`, [k.row, k.col]);
+            }
+        }
     });
 });
+
+const getAnchor = (c: Coordinate): Coordinate => {
+    return VIRTUAL_TO_ANCHOR.get(`${c[0]}-${c[1]}`) || c;
+};
 
 // Helper to check if a coordinate is in the valid list (for movement validation if we wanted strict mode)
 // For now, we only strictly enforce FOOD spawning. Snake can move through empty space (void).
@@ -41,10 +61,10 @@ const INITIAL_SNAKE: Coordinate[] = [
     [3, 4],
     [3, 3]
 ];
-// Ensure initial food is valid
-const INITIAL_FOOD: Coordinate = VALID_COORDS.find(c => c[0] === 3 && c[1] === 15) || VALID_COORDS[Math.floor(Math.random() * VALID_COORDS.length)];
-
+// Pick from VALID_GRID_CELLS to ensure food never spawns in a void
+const INITIAL_FOOD: Coordinate = VALID_GRID_CELLS[Math.floor(Math.random() * VALID_GRID_CELLS.length)];
 const INITIAL_DIRECTION: Direction = 'RIGHT';
+const translateToBackend = (coords: Coordinate[]) => coords.map(getAnchor);
 
 const Snake: React.FC = () => {
     const [snake, setSnake] = useState<Coordinate[]>(INITIAL_SNAKE);
@@ -114,7 +134,7 @@ const Snake: React.FC = () => {
             const head = prevSnake[0];
             const newHead: Coordinate = [...head];
             const currentDir = directionRef.current;
-            setDirection(currentDir); 
+            setDirection(currentDir);
 
             switch (currentDir) {
                 case 'UP': newHead[0] -= 1; break;
@@ -164,23 +184,22 @@ const Snake: React.FC = () => {
                 let newFood: Coordinate;
                 let attempts = 0;
                 do {
-                    // Pick random index from valid list
-                    const idx = Math.floor(Math.random() * VALID_COORDS.length);
-                    newFood = VALID_COORDS[idx];
+                    const idx = Math.floor(Math.random() * VALID_GRID_CELLS.length);
+                    newFood = VALID_GRID_CELLS[idx];
                     attempts++;
                 } while (
-                    newSnake.some(segment => segment[0] === newFood[0] && segment[1] === newFood[1]) && 
+                    newSnake.some(segment => segment[0] === newFood[0] && segment[1] === newFood[1]) &&
                     attempts < 100
                 );
                 setFood(newFood);
             } else {
-                newSnake.pop(); 
+                newSnake.pop();
             }
 
             if (isSyncing && socketRef.current) {
                 socketRef.current.emit('snake:frame', {
-                    snake: newSnake,
-                    food: food,
+                    snake: translateToBackend(prevSnake), // Translate!
+                    food: getAnchor(food),                // Translate!
                     isPlaying: true,
                     gameOver: false
                 });
