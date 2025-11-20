@@ -12,16 +12,14 @@ app.use(cors({
   origin: "*"
 }));
 
-// --- THE ONLY ADDITION ---
-// Initialize the Frida proxy, which will spawn the worker process in the background.
+// --- THE DAEMON ADDITIONs ---
 console.log('[Server] Initializing Frida proxy...');
 require('./frida/proxy.js');
 require('./daemons/godModeDirector');
-// ...
 require('./daemons/weatherMonitor');
-// ...
+require("./daemons/typingMonitor");
 // require('./daemons/timeOfDay.js');
-// require('./daemons/processMonitor');
+require('./daemons/processMonitor');
 // -------------------------
 
 const apiDir = path.join(__dirname, "api");

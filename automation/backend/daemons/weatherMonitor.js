@@ -26,6 +26,7 @@ function mapWeatherCondition(weatherId) {
 
 async function fetchWeather() {
     try {
+        // 1. Get Full Hydrated State
         const currentState = await getGodModeState();
         
         const zip = currentState.weatherSettings?.zipCode;
@@ -40,29 +41,36 @@ async function fetchWeather() {
         const weatherId = data.weather[0].id;
         const condition = mapWeatherCondition(weatherId);
         const tempC = data.main.temp;
+        const tempF = (tempC * 9/5) + 32; 
 
-        console.log(`[WeatherDaemon] ${data.name}: ${data.weather[0].main} (${condition}) | Temp: ${tempC}°C`);
+        console.log(`[WeatherDaemon] ${data.name}: ${data.weather[0].main} (${condition}) | Temp: ${tempF.toFixed(1)}°F`);
 
-        // --- FIX: Use Flat Schema ---
-        // weather: 'RAIN' (String), NOT { condition: 'RAIN' }
-        
+        // 2. Prepare the Update
+        // We must ensure we don't wipe out the existing widget config
         const currentWidgets = currentState.widgets || {};
+        const currentTempConfig = currentWidgets.temperature || {};
 
+        const newTempWidget = {
+            ...currentTempConfig, // Keep enabled, keys, low, high
+            value: tempF          // Update Value
+        };
+
+        // 3. Save to DB (Persist)
         await mergeGodModeState({
-            weather: condition, // Save as String
+            weather: condition,
             widgets: {
                 ...currentWidgets,
-                temperature: {
-                    ...currentWidgets.temperature,
-                    value: tempC
-                }
+                temperature: newTempWidget
             }
         });
 
-        // Sync Frida
+        // 4. Sync Frida (Live)
+        // We send the FULL merged widget object so Frida has context
         await sendCommand('updateState', { 
             weather: condition, 
-            widgets: { temperature: { value: tempC } } 
+            widgets: { 
+                temperature: newTempWidget 
+            } 
         });
 
     } catch (error) {

@@ -49,7 +49,7 @@ context.goldenBuffers.details = new Uint8Array([
 
 // FIX: Removed [] brackets here. The loader injects the full array string.
 context.keyGroups = [{"group_name":"Function Row (Top)","keys":[{"id":1,"key_name":"Esc","row":0,"col":0},{"id":2,"key_name":"F1","row":0,"col":2},{"id":3,"key_name":"F2","row":0,"col":3},{"id":4,"key_name":"F3","row":0,"col":4},{"id":5,"key_name":"F4","row":0,"col":5},{"id":6,"key_name":"F5","row":0,"col":6},{"id":7,"key_name":"F6","row":0,"col":7},{"id":8,"key_name":"F7","row":0,"col":8},{"id":9,"key_name":"F8","row":0,"col":9},{"id":10,"key_name":"F9","row":0,"col":10},{"id":11,"key_name":"F10","row":0,"col":11},{"id":12,"key_name":"F11","row":0,"col":12},{"id":13,"key_name":"F12","row":0,"col":13},{"id":14,"key_name":"Insert","row":0,"col":15},{"id":15,"key_name":"PrtSc","row":0,"col":16},{"id":16,"key_name":"Delete","row":0,"col":17}]},{"group_name":"Navigation Cluster (Top Right)","keys":[{"id":17,"key_name":"Home","row":0,"col":18},{"id":18,"key_name":"End","row":0,"col":19},{"id":19,"key_name":"PgUp","row":0,"col":20},{"id":20,"key_name":"PgDn","row":0,"col":21}]},{"group_name":"Number Row","keys":[{"id":22,"key_name":"~ (Tilde)","row":1,"col":0},{"id":23,"key_name":"1","row":1,"col":1},{"id":24,"key_name":"2","row":1,"col":2},{"id":25,"key_name":"3","row":1,"col":3},{"id":26,"key_name":"4","row":1,"col":4},{"id":27,"key_name":"5","row":1,"col":5},{"id":28,"key_name":"6","row":1,"col":6},{"id":29,"key_name":"7","row":1,"col":7},{"id":30,"key_name":"8","row":1,"col":8},{"id":31,"key_name":"9","row":1,"col":9},{"id":32,"key_name":"0","row":1,"col":10},{"id":33,"key_name":"- (Minus)","row":1,"col":11},{"id":34,"key_name":"= (Equals)","row":1,"col":12},{"id":56,"key_name":"Backspace","row":1,"col":13}]},{"group_name":"Alpha Block (Top: QWERTY)","keys":[{"id":64,"key_name":"Tab","row":2,"col":0},{"id":66,"key_name":"Q","row":2,"col":1},{"id":67,"key_name":"W","row":2,"col":2},{"id":68,"key_name":"E","row":2,"col":3},{"id":69,"key_name":"R","row":2,"col":4},{"id":70,"key_name":"T","row":2,"col":5},{"id":71,"key_name":"Y","row":2,"col":6},{"id":72,"key_name":"U","row":2,"col":7},{"id":73,"key_name":"I","row":2,"col":8},{"id":74,"key_name":"O","row":2,"col":9},{"id":75,"key_name":"P","row":2,"col":10},{"id":76,"key_name":"[","row":2,"col":11},{"id":77,"key_name":"]","row":2,"col":12},{"id":78,"key_name":"\\ (Backslash)","row":2,"col":13}]},{"group_name":"Alpha Block (Middle: ASDF)","keys":[{"id":85,"key_name":"Caps Lock","row":3,"col":0},{"id":109,"key_name":"A","row":3,"col":1},{"id":110,"key_name":"S","row":3,"col":2},{"id":88,"key_name":"D","row":3,"col":3},{"id":89,"key_name":"F","row":3,"col":4},{"id":90,"key_name":"G","row":3,"col":5},{"id":113,"key_name":"H","row":3,"col":6},{"id":114,"key_name":"J","row":3,"col":7},{"id":91,"key_name":"K","row":3,"col":8},{"id":92,"key_name":"L","row":3,"col":9},{"id":93,"key_name":"; (Semicolon)","row":3,"col":10},{"id":95,"key_name":"' (Quote)","row":3,"col":11},{"id":119,"key_name":"Enter","row":3,"col":13}]},{"group_name":"Alpha Block (Bottom: ZXCV)","keys":[{"id":106,"key_name":"Left Shift","row":4,"col":0},{"id":130,"key_name":"Z","row":4,"col":2},{"id":131,"key_name":"X","row":4,"col":3},{"id":111,"key_name":"C","row":4,"col":4},{"id":112,"key_name":"V","row":4,"col":5},{"id":135,"key_name":"B","row":4,"col":6},{"id":136,"key_name":"N","row":4,"col":7},{"id":115,"key_name":"M","row":4,"col":8},{"id":116,"key_name":", (Comma)","row":4,"col":9},{"id":117,"key_name":". (Period)","row":4,"col":10},{"id":118,"key_name":"/ (Slash)","row":4,"col":11},{"id":141,"key_name":"Right Shift","row":4,"col":13}]},{"group_name":"Bottom Modifiers & Arrows","keys":[{"id":127,"key_name":"Left Ctrl","row":5,"col":0},{"id":128,"key_name":"Fn","row":5,"col":1},{"id":150,"key_name":"Left Win","row":5,"col":2},{"id":151,"key_name":"Left Alt","row":5,"col":3},{"id":152,"key_name":"Space","row":5,"col":6},{"id":154,"key_name":"Right Alt","row":5,"col":10},{"id":155,"key_name":"Menu / R-Ctrl","row":5,"col":11},{"id":156,"key_name":"Left Arrow","row":5,"col":15},{"id":157,"key_name":"Up Arrow","row":4,"col":16},{"id":159,"key_name":"Down Arrow","row":5,"col":16},{"id":161,"key_name":"Right Arrow","row":5,"col":17}]},{"group_name":"Numpad","keys":[{"id":38,"key_name":"Num Lock","row":1,"col":18},{"id":39,"key_name":"Num /","row":1,"col":19},{"id":40,"key_name":"Num *","row":1,"col":20},{"id":41,"key_name":"Num -","row":1,"col":21},{"id":79,"key_name":"Num 7","row":2,"col":18},{"id":80,"key_name":"Num 8","row":2,"col":19},{"id":81,"key_name":"Num 9","row":2,"col":20},{"id":104,"key_name":"Num +","row":2,"col":21},{"id":121,"key_name":"Num 4","row":3,"col":18},{"id":123,"key_name":"Num 5","row":3,"col":19},{"id":124,"key_name":"Num 6","row":3,"col":20},{"id":142,"key_name":"Num 1","row":4,"col":18},{"id":144,"key_name":"Num 2","row":4,"col":19},{"id":146,"key_name":"Num 3","row":4,"col":20},{"id":163,"key_name":"Num 0","row":5,"col":19},{"id":165,"key_name":"Num .","row":5,"col":20},{"id":167,"key_name":"Num Enter","row":4,"col":21}]}];
-context.initialState = {"active":false,"mode":"DEFAULT","weather":"CLEAR","timeOfDay":0.5,"cpuTemp":0,"downloadProgress":-1,"backgroundMode":"none","timeUpdateRate":1,"effectSettings":{"effectType":"Ripple","baseColor":"#0070FF","speed":3},"stormOverride":false,"weatherEnabled":true,"weatherKeys":[],"weatherSettings":{"zipCode":""}};
+context.initialState = {"active":false,"mode":"DEFAULT","weather":"CLEAR","timeOfDay":0.5,"cpuTemp":0,"downloadProgress":-1,"backgroundMode":"none","timeUpdateRate":1,"effectSettings":{"effectType":"Ripple","baseColor":"#0070FF","speed":3},"stormOverride":false,"weatherEnabled":true,"weatherKeys":[],"weatherSettings":{"zipCode":""},"widgets":{"dayBar":{},"temperature":{"value":0}},"interrupts":{"progress":{}}};
 
 function defineNativeFunction(name, definition) {
     if (context.nativeFunctions[name] || !context.baseAddress) return;
@@ -325,7 +325,7 @@ registerAction(({
     dependencies: {},
     action: (context) => {
         const { baseAddress, log, keyGroups, initialState } = context;
-        
+
         const PRIMITIVE_RVA = 0x209b0;
         const HEADER_SIZE = 4;
         const BYTES_PER_KEY = 5;
@@ -335,43 +335,43 @@ registerAction(({
         // We clone the injected initial state to ensure we match the backend exactly.
         // We manually add internal/runtime properties that might not be in the DB config.
         const state = JSON.parse(JSON.stringify(initialState));
-        
+
         // Runtime-only state (not persisted in DB)
         state.alerts = [];
-        
+
         // Ensure widgets object exists if backend didn't send it (backwards compat)
         if (!state.widgets) state.widgets = {
-            dayBar: { enabled: false, activeColor: {r:0,g:255,b:0}, inactiveColor: {r:20,g:20,b:20} },
+            dayBar: { enabled: false, activeColor: { r: 0, g: 255, b: 0 }, inactiveColor: { r: 20, g: 20, b: 20 } },
             temperature: { enabled: false, value: 0, low: 0, high: 100, keys: [] }
         };
         if (!state.interrupts) state.interrupts = {
-            progress: { enabled: false, value: 0, startKey: 0, endKey: 0, startColor: {r:0,g:255,b:0}, endColor: {r:255,g:0,b:0} },
-            safety: { enabled: false, active: false, color: {r:255,g:0,b:0}, keys: [] }
+            progress: { enabled: false, value: 0, startKey: 0, endKey: 0, startColor: { r: 0, g: 255, b: 0 }, endColor: { r: 255, g: 0, b: 0 } },
+            safety: { enabled: false, active: false, color: { r: 255, g: 0, b: 0 }, keys: [] }
         };
 
         // --- FX STATE ---
         const activeFades = new Map();
 
         // --- GEOMETRY PRE-CALC ---
-        const KEY_MAP = new Map();     
-        const NAME_TO_ID = new Map();  
-        
+        const KEY_MAP = new Map();
+        const NAME_TO_ID = new Map();
+
         keyGroups.forEach(group => {
             group.keys.forEach(k => {
                 const meta = { row: k.row, col: k.col, group: group.group_name };
                 KEY_MAP.set(k.id, meta);
-                if(k.key_name) NAME_TO_ID.set(k.key_name.toUpperCase(), k.id);
+                if (k.key_name) NAME_TO_ID.set(k.key_name.toUpperCase(), k.id);
             });
         });
 
         // --- HELPERS ---
         function hexToRgb(hex) {
-            if (!hex || typeof hex !== 'string') return { r:0, g:0, b:0 };
+            if (!hex || typeof hex !== 'string') return { r: 0, g: 0, b: 0 };
             const cleanHex = hex.replace('#', '');
             return {
-                r: parseInt(cleanHex.substring(0,2), 16) || 0,
-                g: parseInt(cleanHex.substring(2,4), 16) || 0,
-                b: parseInt(cleanHex.substring(4,6), 16) || 0
+                r: parseInt(cleanHex.substring(0, 2), 16) || 0,
+                g: parseInt(cleanHex.substring(2, 4), 16) || 0,
+                b: parseInt(cleanHex.substring(4, 6), 16) || 0
             };
         }
 
@@ -396,7 +396,7 @@ registerAction(({
 
                 if (dataPtr.readU8() === 0x07 && dataPtr.add(1).readU8() === 0xA1) {
                     tick++;
-                    
+
                     let cursor = dataPtr.add(HEADER_SIZE);
                     const limit = dataPtr.add(BUFFER_SIZE - BYTES_PER_KEY);
 
@@ -412,16 +412,27 @@ registerAction(({
                                 const bgMode = (state.backgroundMode || 'NONE').toUpperCase();
                                 const weatherCond = (state.weather || 'CLEAR').toUpperCase();
                                 const isStorming = state.stormOverride && (weatherCond === 'RAIN' || weatherCond === 'STORM');
+                                const isWeatherKey = state.weatherKeys && state.weatherKeys.includes(keyId);
 
                                 if (isStorming) {
                                     // Rain
                                     const noise = Math.sin(pos.col * 0.5 + tick * 0.1);
                                     if (noise > 0.85) { b = 255; r = 0; g = 0; }
-                                    if (weatherCond === 'STORM' && Math.random() > 0.995) { r=255; g=255; b=255; }
-                                } 
+                                    if (weatherCond === 'STORM' && Math.random() > 0.995) { r = 255; g = 255; b = 255; }
+                                }
+                                else if (isWeatherKey) {
+                                    // Dedicated Weather Key (Always shows condition)
+                                    // CLEAR=Light Blue, CLOUDS=White, RAIN=Deep Blue, STORM=Dark Purple, SNOW=Gray
+                                    if (weatherCond === 'CLEAR') { r = 135; g = 206; b = 235; }
+                                    else if (weatherCond === 'CLOUDS') { r = 200; g = 200; b = 200; }
+                                    else if (weatherCond === 'RAIN') { r = 0; g = 0; b = 255; }
+                                    else if (weatherCond === 'STORM') { r = 75; g = 0; b = 130; }
+                                    else if (weatherCond === 'SNOW') { r = 128; g = 128; b = 128; }
+                                    else { r = 50; g = 50; b = 50; } // Default/Unknown
+                                }
                                 else if (bgMode === 'TIME') {
                                     const t = Math.sin((state.timeOfDay || 0.5) * Math.PI);
-                                    r = Math.floor(t*200); g = Math.floor(t*50); b = Math.floor(t*100);
+                                    r = Math.floor(t * 200); g = Math.floor(t * 50); b = Math.floor(t * 100);
                                 }
                                 else if (bgMode === 'EFFECT') {
                                     const settings = state.effectSettings || {};
@@ -431,12 +442,12 @@ registerAction(({
 
                                     if (type === 'WAVE' || type === 'RIPPLE') {
                                         const wave = Math.sin((pos.col * 0.2) + (tick * 0.05 * s));
-                                        const dim = (wave + 1) / 2; 
+                                        const dim = (wave + 1) / 2;
                                         r = base.r * dim; g = base.g * dim; b = base.b * dim;
                                     }
                                     else if (type === 'CHECKERBOARD' || type === 'CHECKER') {
                                         const isEven = (pos.row + pos.col) % 2 === 0;
-                                        const invert = Math.floor(tick / (60/s)) % 2 === 1;
+                                        const invert = Math.floor(tick / (60 / s)) % 2 === 1;
                                         if ((isEven && !invert) || (!isEven && invert)) {
                                             r = base.r; g = base.g; b = base.b;
                                         }
@@ -447,27 +458,59 @@ registerAction(({
                                 // (Shortcuts logic to be added)
 
                                 // === LAYER 3: WIDGETS ===
-                                // Day Bar
+                                // Day Bar (F1-F12)
                                 if (state.widgets.dayBar?.enabled && pos.group.includes("Function")) {
-                                    // Logic TBD - placeholder
+                                    // F1(2) -> F12(13)
+                                    const fIndex = (keyId >= 2 && keyId <= 13) ? keyId - 2 : -1;
+                                    if (fIndex >= 0) {
+                                        // 24 hours / 12 keys = 2 hours per key
+                                        const currentHour = (state.timeOfDay || 0) * 24;
+                                        const keyStart = fIndex * 2;
+                                        const keyEnd = keyStart + 2;
+
+                                        const active = hexToRgb(state.widgets.dayBar.activeColor || '#00FF00');
+                                        const inactive = hexToRgb(state.widgets.dayBar.inactiveColor || '#222222');
+
+                                        if (currentHour >= keyEnd) {
+                                            // Past -> Solid Active
+                                            r = active.r; g = active.g; b = active.b;
+                                        } else if (currentHour >= keyStart) {
+                                            // Present -> Pulse
+                                            const pulse = (Math.sin(tick * 0.1) + 1) / 2; // 0-1
+                                            // Blend Active and Inactive based on pulse
+                                            r = active.r * pulse + inactive.r * (1 - pulse);
+                                            g = active.g * pulse + inactive.g * (1 - pulse);
+                                            b = active.b * pulse + inactive.b * (1 - pulse);
+                                        } else {
+                                            // Future -> Inactive
+                                            r = inactive.r; g = inactive.g; b = inactive.b;
+                                        }
+                                    }
                                 }
+
                                 // Temperature
-                                if (state.widgets.temperature?.enabled && state.widgets.temperature.keys?.includes(keyId)) {
-                                    const { value, low, high } = state.widgets.temperature;
+                                // console.log('temp enabled', JSON.stringify(state.widgets.temperature));
+                                if (state.widgets.temperature?.enabled && state.widgets.temperature.keys?.some(k => k == keyId)) {
+                                    const { value, low, high, lowColor, highColor } = state.widgets.temperature;
                                     let t = (value - low) / (high - low);
                                     if (t < 0) t = 0; if (t > 1) t = 1;
-                                    const c = t < 0.5 
-                                        ? mix({r:0,g:0,b:255}, {r:0,g:255,b:0}, t*2)
-                                        : mix({r:0,g:255,b:0}, {r:255,g:0,b:0}, (t-0.5)*2);
-                                    r=c.r; g=c.g; b=c.b;
+
+                                    // Use User-Defined Colors (Default to Blue/Red if missing)
+                                    const start = hexToRgb(lowColor || '#0000FF');
+                                    const end = hexToRgb(highColor || '#FF0000');
+
+                                    // Simple Linear Mix
+                                    const c = mix(start, end, t);
+
+                                    r = c.r; g = c.g; b = c.b;
                                 }
 
                                 // === LAYER 4: INTERRUPTS ===
                                 // Progress Bar
                                 if (state.downloadProgress >= 0 && pos.group.includes("Number Row")) {
                                     const keyPercent = (pos.col / 13) * 100;
-                                    if (keyPercent < state.downloadProgress) { g=255; r=0; b=0; } 
-                                    else { g=0; r=20; b=0; }
+                                    if (keyPercent < state.downloadProgress) { g = 255; r = 0; b = 0; }
+                                    else { g = 0; r = 20; b = 0; }
                                 }
 
                                 // === LAYER 5: FX ===
@@ -477,7 +520,7 @@ registerAction(({
                                     r = Math.min(255, r + flash);
                                     g = Math.min(255, g + flash);
                                     b = Math.min(255, b + flash);
-                                    intensity -= 0.05;
+                                    intensity -= 0.10;
                                     if (intensity <= 0) activeFades.delete(keyId);
                                     else activeFades.set(keyId, intensity);
                                 }
@@ -497,7 +540,7 @@ registerAction(({
         return {
             enable: () => { state.active = true; log("God Mode Enabled"); },
             disable: () => { state.active = false; log("God Mode Disabled"); },
-            
+
             updateState: (partialState) => {
                 // Deep merge required for settings objects
                 for (const key in partialState) {

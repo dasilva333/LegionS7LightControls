@@ -27,7 +27,7 @@ const DayBarCard: React.FC<DayBarCardProps> = ({ disabled }) => {
   const [inactiveColor, setInactiveColor] = useState(DEFAULT_CONFIG.inactiveColor!);
   const [loading, setLoading] = useState(true);
 
-  const widgetId = 'day_bar';
+  const widgetId = 'dayBar';
 
   const persist = async (overrides: DayBarConfig) => {
     const nextConfig = {

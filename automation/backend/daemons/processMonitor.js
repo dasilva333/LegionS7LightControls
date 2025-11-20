@@ -1,98 +1,68 @@
-// Import the Traffic Cop
-const stateManager = require('../services/stateManager');
-
-// Import the Frida Proxy directly to talk to hardware
+const { mergeGodModeState } = require('../services/godmodeConfigStore');
 const { sendCommand } = require('../frida/proxy');
+const knex = require('../db/knex');
 
-// Database setup
-const knex = require('knex')(require('../knexfile').development);
+const CHECK_INTERVAL_MS = 5000; // Check every 5 seconds
 
-// Configuration
-const CHECK_INTERVAL_MS = 30 * 1000; // Check every 30 seconds
+let activeGame = null;
 
-// --- HARDCODED PROFILE IDs ---
-// In the future, we could add a 'target_profile_index' column to the processes table
-// so different games trigger different slots (e.g. CS:GO -> Slot 1, Destiny -> Slot 6).
-const GAME_PROFILE_INDEX = 6;   // The "Aurora Sync" / Screen Sync slot
-const AMBIENT_PROFILE_INDEX = 5; // The Time-of-Day / Default slot
-
-// Local state
-let localOverrideActive = false;
-let activeProcessName = null;
-
-/**
- * Main monitoring logic
- */
 async function checkProcesses() {
     try {
+        // Load ps-list dynamically (ESM module)
         const { default: psList } = await import('ps-list');
 
-        // Get monitored processes from DB
-        const monitoredProcesses = await knex('processes')
-            .where('is_active', true)
-            .select('process_name'); // We don't rely on filename anymore
+        // 1. Get list of monitored processes from DB
+        const targets = await knex('processes').where('is_active', true).select('process_name');
+        if (targets.length === 0) return;
 
-        if (monitoredProcesses.length === 0) return;
+        // 2. Get currently running processes
+        const running = await psList();
+        const runningNames = new Set(running.map(p => p.name.toLowerCase()));
 
-        const runningProcesses = await psList();
-        const runningProcessNames = new Set(runningProcesses.map(p => p.name.toLowerCase()));
-
-        let foundMatch = null;
-
-        for (const monitored of monitoredProcesses) {
-            if (runningProcessNames.has(monitored.process_name.toLowerCase())) {
-                foundMatch = monitored;
-                break; 
+        // 3. Check for match
+        let foundGame = null;
+        for (const target of targets) {
+            if (runningNames.has(target.process_name.toLowerCase())) {
+                foundGame = target.process_name;
+                break; // Priority doesn't matter much, just grab the first one
             }
         }
 
-        // --- State Transition Logic ---
-
-        // CASE A: Game Detected -> Switch to Profile 6
-        if (foundMatch && !localOverrideActive) {
-            console.log(`[ProcessMonitor] DETECTED: ${foundMatch.process_name}`);
-            
-            const granted = stateManager.requestProcessOverride(foundMatch.process_name);
-
-            if (granted) {
-                console.log(`[ProcessMonitor] Switching to Game Profile (Index ${GAME_PROFILE_INDEX})...`);
-                
-                // Send the command directly via Frida Proxy
-                await sendCommand("setProfileIndex", { profileId: GAME_PROFILE_INDEX });
-                
-                localOverrideActive = true;
-                activeProcessName = foundMatch.process_name;
-            }
-        }
+        // 4. State Transition Logic
         
-        // CASE B: Game Lost -> Switch back to Profile 5 (Ambient)
-        else if (!foundMatch && localOverrideActive) {
-            console.log(`[ProcessMonitor] LOST: ${activeProcessName}. Releasing override.`);
+        // Case A: Game Started (Transition Default -> Passthrough)
+        if (foundGame && !activeGame) {
+            console.log(`[ProcessMonitor] GAME DETECTED: ${foundGame}. Engaging Passthrough Mode.`);
             
-            // 1. Switch hardware back to the ambient slot immediately
-            console.log(`[ProcessMonitor] Reverting to Ambient Profile (Index ${AMBIENT_PROFILE_INDEX})...`);
-            await sendCommand("setProfileIndex", { profileId: AMBIENT_PROFILE_INDEX });
-
-            // 2. Tell StateManager we are done
-            // (This will trigger ToD to update colors, ensuring Profile 5 has the correct time-of-day color)
-            stateManager.releaseProcessOverride();
+            // Update DB & Frida
+            await mergeGodModeState({ mode: 'PASSTHROUGH' });
+            await sendCommand('updateState', { mode: 'PASSTHROUGH' });
             
-            localOverrideActive = false;
-            activeProcessName = null;
+            activeGame = foundGame;
+        }
+        // Case B: Game Stopped (Transition Passthrough -> Default)
+        else if (!foundGame && activeGame) {
+            console.log(`[ProcessMonitor] GAME CLOSED: ${activeGame}. Resuming God Mode.`);
+            
+            // Update DB & Frida
+            await mergeGodModeState({ mode: 'DEFAULT' });
+            await sendCommand('updateState', { mode: 'DEFAULT' });
+            
+            activeGame = null;
         }
 
     } catch (err) {
-        console.error('[ProcessMonitor] Error during check:', err);
+        console.error('[ProcessMonitor] Error:', err.message);
     }
 }
 
-/**
- * Start the loop
- */
 function start() {
-    console.log(`[ProcessMonitor] Starting daemon. Watching processes every ${CHECK_INTERVAL_MS/1000}s...`);
+    console.log(`[ProcessMonitor] Daemon started. Polling every ${CHECK_INTERVAL_MS/1000}s.`);
+    // Initial check
     checkProcesses();
+    // Loop
     setInterval(checkProcesses, CHECK_INTERVAL_MS);
 }
 
+// Auto-start
 start();
