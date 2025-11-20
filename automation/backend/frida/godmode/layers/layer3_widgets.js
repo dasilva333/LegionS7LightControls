@@ -1,6 +1,6 @@
 function render(state, pos, tick, currentColor, utils) {
-    if (!pos || !state?.widgets) return currentColor || { r: 0, g: 0, b: 0 };
-    let { r, g, b } = currentColor || { r: 0, g: 0, b: 0 };
+    if (!pos || !state?.widgets) return currentColor;
+    let { r, g, b } = currentColor; // Start with the background color
     const { keyId } = pos;
     const { hexToRgb, mix } = utils;
 
@@ -8,10 +8,8 @@ function render(state, pos, tick, currentColor, utils) {
     const dayBar = state.widgets.dayBar;
     if (dayBar?.enabled && pos.group?.includes('Function')) {
         const fIndex = (keyId >= 2 && keyId <= 13) ? keyId - 2 : -1;
-              // console.log('find index', keyId, fIndex );
         if (fIndex >= 0) {
             const currentHour = (state.timeOfDay || 0) * 24;
-            // console.log('currentHour', currentHour);
             const keyStart = fIndex * 2;
             const keyEnd = keyStart + 2;
             const active = hexToRgb(dayBar.activeColor || '#00FF00');
@@ -40,7 +38,6 @@ function render(state, pos, tick, currentColor, utils) {
 
     // Temperature
     const tempWidget = state.widgets.temperature;
-    // Robust check for keyId (number) vs config keys (string/number)
     if (tempWidget?.enabled && Array.isArray(tempWidget.keys) && tempWidget.keys.some(k => k == keyId)) {
         const { value = 0, low = 0, high = 100, lowColor, highColor } = tempWidget;
         let t = (value - low) / (high - low || 1);
