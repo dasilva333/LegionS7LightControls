@@ -97,25 +97,24 @@ const Settings: React.FC = () => {
             <div className={`status-dot ${isGodModeEnabled ? 'status-dot--connected' : 'status-dot--disconnected'}`} />
           </div>
           <div className="settings-toolbar__right">
-            <span className="godmode-label">God Mode</span>
-            <IonToggle
-              checked={isGodModeEnabled}
-              onIonChange={(event) => handleMasterToggle(event.detail.checked)}
-              disabled={loadingState}
-            />
+            <IonItem lines="none" className="zip-input-item">
+              <IonInput
+                type="text"
+                value={zipCode}
+                maxlength={10}
+                onIonChange={handleZipChange}
+                placeholder="Zip Code"
+              />
+            </IonItem>
+            <div className="godmode-control">
+              <span className="godmode-label">God Mode</span>
+              <IonToggle
+                checked={isGodModeEnabled}
+                onIonChange={(event) => handleMasterToggle(event.detail.checked)}
+                disabled={loadingState}
+              />
+            </div>
           </div>
-        </IonToolbar>
-        <IonToolbar className="settings-subtoolbar">
-          <IonItem lines="none" className="zip-input">
-            <IonLabel position="stacked">Zip Code</IonLabel>
-            <IonInput
-              type="text"
-              value={zipCode}
-              maxlength={10}
-              onIonChange={handleZipChange}
-              placeholder="Enter Zip"
-            />
-          </IonItem>
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen className="ion-padding">
@@ -126,7 +125,7 @@ const Settings: React.FC = () => {
         <DayBarCard disabled={globalDisabled} />
         <TemperatureCard disabled={globalDisabled} />
         <ProgressBarCard disabled={globalDisabled} />
-        <SafetyMonitorCard disabled={globalDisabled || !settingsSupports.safetyMonitor} />
+        {/* <SafetyMonitorCard disabled={globalDisabled || !settingsSupports.safetyMonitor} /> */}
         <TypingFxCard disabled={globalDisabled} />
         <AudioFxCard disabled={globalDisabled || !settingsSupports.audioFx} />
       </IonContent>

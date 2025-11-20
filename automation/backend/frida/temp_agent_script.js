@@ -155,96 +155,120 @@ return { buildKeyMaps };
 (function () {
   function applyWeatherColor(condition) {
     switch (condition) {
-      case 'CLEAR': return { r: 135, g: 206, b: 235 }; // Sky Blue
-      case 'CLOUDS': return { r: 200, g: 200, b: 200 }; // Grey
-      case 'RAIN': return { r: 0, g: 0, b: 255 };       // Deep Blue
-      case 'STORM': return { r: 75, g: 0, b: 130 };     // Purple
-      case 'SNOW': return { r: 128, g: 128, b: 128 };   // White/Grey
+      case 'CLEAR': return { r: 135, g: 206, b: 235 };
+      case 'CLOUDS': return { r: 200, g: 200, b: 200 };
+      case 'RAIN': return { r: 0, g: 0, b: 255 };
+      case 'STORM': return { r: 75, g: 0, b: 130 };
+      case 'SNOW': return { r: 128, g: 128, b: 128 };
       default: return { r: 50, g: 50, b: 50 };
     }
   }
 
   function render(state, pos, tick, currentColor, utils) {
     if (!pos || !state) return currentColor || { r: 0, g: 0, b: 0 };
-    
+
     const { keyId } = pos;
     const { hexToRgb, hsvToRgb } = utils;
 
-    // 1. Weather Overrides (Highest priority in Layer 1)
+    // 1. Weather Overrides
     const weatherCond = (state.weather || 'CLEAR').toUpperCase();
     const isStorming = state.stormOverride && (weatherCond === 'RAIN' || weatherCond === 'STORM');
     const isWeatherKey = Array.isArray(state.weatherKeys) && state.weatherKeys.includes(keyId);
 
     if (isStorming) {
-      const noise = Math.sin(pos.col * 0.5 + tick * 0.1);
-      if (noise > 0.85) return { r: 0, g: 0, b: 255 };
-      if (weatherCond === 'STORM' && Math.random() > 0.995) return { r: 255, g: 255, b: 255 };
-      return { r: 0, g: 0, b: 0 };
-    } 
-    
+        const noise = Math.sin(pos.col * 0.5 + tick * 0.1);
+        if (noise > 0.85) return { r: 0, g: 0, b: 255 };
+        if (weatherCond === 'STORM' && Math.random() > 0.995) return { r: 255, g: 255, b: 255 };
+        return { r: 0, g: 0, b: 0 };
+    }
+
     if (isWeatherKey) {
-      return applyWeatherColor(weatherCond);
+        return applyWeatherColor(weatherCond);
     }
 
     // 2. Background Logic
-    const bgMode = (state.backgroundMode || 'NONE').toUpperCase(); // 'NONE', 'TIME', 'EFFECT'
+    let bgMode = (state.backgroundMode || 'NONE').toUpperCase();
+    // Backwards compatibility for old 'TIME' mode
+    if (bgMode === 'TIME') bgMode = 'EFFECT';
 
-    // If mode is NONE, return black (or current color)
-    if (bgMode === 'NONE') return { r:0, g:0, b:0 };
+    if (bgMode === 'NONE') return { r: 0, g: 0, b: 0 };
+
+    const settings = state.effectSettings || {};
+    const effectType = (settings.effectType || 'SOLID').toUpperCase();
+    
+    // Handle old 'TIME' mode migration logic implicitly
+    const rawColorSource = settings.colorSource || (state.backgroundMode === 'TIME' ? 'TIME OF DAY' : 'STATIC');
+    const colorSource = rawColorSource.toUpperCase();
+    
+    const speed = settings.speed || 3;
 
     // --- STEP A: DETERMINE BASE COLOR ---
     let base = { r: 0, g: 0, b: 0 };
-    
-    // If mode is TIME, force Color Source to TIME. Otherwise read from settings.
-    const settings = state.effectSettings || {};
-    const colorSource = bgMode === 'TIME' ? 'TIME' : (settings.colorSource || 'STATIC').toUpperCase();
 
-    if (colorSource === 'TIME') {
+    if (colorSource === 'TIME OF DAY' || colorSource === 'TIME') {
+        // Time Gradient Logic
         const t = Math.sin((state.timeOfDay || 0.5) * Math.PI);
-        base = { 
-            r: Math.floor(t * 200), 
-            g: Math.floor(t * 50), 
-            b: Math.floor(t * 100) 
+        // Note: For full implementation, this should interpolate between user-defined gradients
+        // For now, using the placeholder logic until we inject the full gradient array
+        base = {
+            r: Math.floor(t * 200),
+            g: Math.floor(t * 50),
+            b: Math.floor(t * 100)
         };
     } 
     else if (colorSource === 'SPECTRUM') {
-        // Rainbow Cycle based on time
-        const hue = (tick * 0.005) % 1.0; 
+        // Rainbow Cycle
+        const hue = (tick * 0.005 * (speed / 3)) % 1.0;
         base = hsvToRgb(hue, 1, 1);
     } 
     else {
-        // Static Color
+        // Static
         base = hexToRgb(settings.baseColor || '#0070FF');
     }
 
     // --- STEP B: APPLY EFFECT PATTERN ---
-    // If mode is TIME, effect is SOLID by default
-    const effectType = bgMode === 'TIME' ? 'SOLID' : (settings.effectType || 'SOLID').toUpperCase();
-    const speed = settings.speed || 3;
+    let dim = 1.0;
 
-    let dim = 1.0; // Brightness multiplier (0.0 - 1.0)
-
-    if (effectType === 'WAVE' || effectType === 'RIPPLE') {
-        // Sine wave moving across columns
+    if (effectType === 'SOLID') {
+        dim = 1.0;
+    }
+    else if (effectType === 'WAVE' || effectType === 'RIPPLE') {
         const wave = Math.sin((pos.col * 0.2) + (tick * 0.05 * speed));
-        dim = (wave + 1) / 2; 
+        dim = (wave + 1) / 2;
     } 
-    else if (effectType === 'BREATHING') {
-        // Global Pulse
+    else if (effectType === 'FADE' || effectType === 'BREATHING') {
         const pulse = Math.sin(tick * 0.02 * speed);
         dim = (pulse + 1) / 2;
-    }
+    } 
     else if (effectType === 'CHECKERBOARD' || effectType === 'CHECKER') {
         const isEven = (pos.row + pos.col) % 2 === 0;
         const invert = Math.floor(tick / (60 / speed)) % 2 === 1;
-        if ((isEven && !invert) || (!isEven && invert)) {
-            dim = 1.0;
-        } else {
-            dim = 0.0; // Turn off the other checker
-        }
+        dim = ((isEven && !invert) || (!isEven && invert)) ? 1.0 : 0.0;
     }
-    
-    // Return final composed color
+    else if (effectType === 'SONAR') {
+        const dx = pos.col - 10;
+        const dy = pos.row - 3;
+        const angle = Math.atan2(dy, dx);
+        const sweep = (tick * 0.05 * speed) % (Math.PI * 2);
+        let diff = Math.abs(angle - (sweep - Math.PI));
+        if (diff > Math.PI) diff = (2 * Math.PI) - diff;
+        dim = (diff < 0.5) ? (1.0 - (diff * 2)) : 0.0;
+    }
+    else if (effectType === 'RAINDROPS') {
+        const seed = Math.floor(tick / (20 / speed)) * 1000 + pos.keyId;
+        const rand = Math.sin(seed) * 10000;
+        const isDrop = (rand - Math.floor(rand)) > 0.98;
+        const subTick = tick % (20 / speed);
+        dim = isDrop ? 1.0 : Math.max(0, 1.0 - (subTick * 0.1));
+    }
+    else if (effectType === 'HEATMAP') {
+        const dx = pos.col - 10;
+        const dy = pos.row - 3;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const pulseSize = 5 + Math.sin(tick * 0.05 * speed) * 2;
+        dim = (dist < pulseSize) ? 1.0 : Math.max(0, 1.0 - ((dist - pulseSize) * 0.2));
+    }
+
     return {
         r: Math.floor(base.r * dim),
         g: Math.floor(base.g * dim),
@@ -262,159 +286,138 @@ return function render(_state, _pos, _tick, currentColor) {
 
 })(),
         layer3_widgets: (function(){
-(function () {
-  function render(state, pos, tick, currentColor, utils) {
+function render(state, pos, tick, currentColor, utils) {
     if (!pos || !state?.widgets) return currentColor || { r: 0, g: 0, b: 0 };
     let { r, g, b } = currentColor || { r: 0, g: 0, b: 0 };
     const { keyId } = pos;
-    const hexToRgb = utils?.hexToRgb || ((hex) => {
-      if (!hex || typeof hex !== 'string') return { r: 0, g: 0, b: 0 };
-      const cleanHex = hex.replace('#', '');
-      return {
-        r: parseInt(cleanHex.substring(0, 2), 16) || 0,
-        g: parseInt(cleanHex.substring(2, 4), 16) || 0,
-        b: parseInt(cleanHex.substring(4, 6), 16) || 0
-      };
-    });
-    const mix = utils?.mix || ((c1, c2, t) => ({
-      r: Math.floor(c1.r + (c2.r - c1.r) * t),
-      g: Math.floor(c1.g + (c2.g - c1.g) * t),
-      b: Math.floor(c1.b + (c2.b - c1.b) * t)
-    }));
+    const { hexToRgb, mix } = utils;
 
+    // Day Bar
     const dayBar = state.widgets.dayBar;
     if (dayBar?.enabled && pos.group?.includes('Function')) {
-      const fIndex = (keyId >= 2 && keyId <= 13) ? keyId - 2 : -1;
-      if (fIndex >= 0) {
-        const currentHour = (state.timeOfDay || 0) * 24;
-        const keyStart = fIndex * 2;
-        const keyEnd = keyStart + 2;
-        const active = hexToRgb(dayBar.activeColor || '#00FF00');
-        const inactive = hexToRgb(dayBar.inactiveColor || '#222222');
+        const fIndex = (keyId >= 2 && keyId <= 13) ? keyId - 2 : -1;
+              // console.log('find index', keyId, fIndex );
+        if (fIndex >= 0) {
+            const currentHour = (state.timeOfDay || 0) * 24;
+            // console.log('currentHour', currentHour);
+            const keyStart = fIndex * 2;
+            const keyEnd = keyStart + 2;
+            const active = hexToRgb(dayBar.activeColor || '#00FF00');
+            const inactive = hexToRgb(dayBar.inactiveColor || '#222222');
 
-        if (currentHour >= keyEnd) {
-          r = active.r;
-          g = active.g;
-          b = active.b;
-        } else if (currentHour >= keyStart && currentHour < keyEnd) {
-          const progress = (currentHour - keyStart) / 2;
-          const pulse = Math.abs(Math.sin(tick * 0.05)) * (progress / 2);
-          r = active.r * pulse + inactive.r * (1 - pulse);
-          g = active.g * pulse + inactive.g * (1 - pulse);
-          b = active.b * pulse + inactive.b * (1 - pulse);
-        } else {
-          r = inactive.r;
-          g = inactive.g;
-          b = inactive.b;
+            if (currentHour >= keyEnd) {
+                r = active.r; g = active.g; b = active.b;
+            } else if (currentHour >= keyStart && currentHour < keyEnd) {
+                // const progress = (currentHour - keyStart) / 2;
+                // const pulse = Math.abs(Math.sin(tick * 0.05)) * (progress / 2);
+                // r = active.r * pulse + inactive.r * (1 - pulse);
+                // g = active.g * pulse + inactive.g * (1 - pulse);
+                // b = active.b * pulse + inactive.b * (1 - pulse);
+                // PRESENT: Breathe between Active and Inactive
+                // Math.sin goes -1 to 1. We map to 0.0 to 1.0.
+                const t = (Math.sin(tick * 0.05) + 1) / 2; 
+                
+                r = Math.floor(active.r * t + inactive.r * (1 - t));
+                g = Math.floor(active.g * t + inactive.g * (1 - t));
+                b = Math.floor(active.b * t + inactive.b * (1 - t));
+            } else {
+                r = inactive.r; g = inactive.g; b = inactive.b;
+            }
         }
-      }
     }
 
+    // Temperature
     const tempWidget = state.widgets.temperature;
-    if (tempWidget?.enabled && Array.isArray(tempWidget.keys) && tempWidget.keys.some((k) => k === keyId)) {
-      const { value = 0, low = 0, high = 100, lowColor, highColor } = tempWidget;
-      let t = (value - low) / (high - low || 1);
-      if (t < 0) t = 0;
-      if (t > 1) t = 1;
-      const start = hexToRgb(lowColor || '#0000FF');
-      const end = hexToRgb(highColor || '#FF0000');
-      const mixed = mix(start, end, t);
-      r = mixed.r;
-      g = mixed.g;
-      b = mixed.b;
+    // Robust check for keyId (number) vs config keys (string/number)
+    if (tempWidget?.enabled && Array.isArray(tempWidget.keys) && tempWidget.keys.some(k => k == keyId)) {
+        const { value = 0, low = 0, high = 100, lowColor, highColor } = tempWidget;
+        let t = (value - low) / (high - low || 1);
+        if (t < 0) t = 0; if (t > 1) t = 1;
+        
+        const start = hexToRgb(lowColor || '#0000FF');
+        const end = hexToRgb(highColor || '#FF0000');
+        const mixed = mix(start, end, t);
+        r = mixed.r; g = mixed.g; b = mixed.b;
     }
 
     return { r, g, b };
-  }
+}
 
-  return render;
-})();
-
+return render;
 })(),
         layer4_interrupts: (function(){
-(function () {
-  function render(state, pos, _tick, currentColor) {
+function render(state, pos, _tick, currentColor) {
     if (!pos || !state) return currentColor || { r: 0, g: 0, b: 0 };
     let { r, g, b } = currentColor || { r: 0, g: 0, b: 0 };
 
+    // Progress Bar
     if (typeof state.downloadProgress === 'number' && state.downloadProgress >= 0) {
-      if (pos.group?.includes('Number Row')) {
-        const keyPercent = (pos.col / 13) * 100;
-        if (keyPercent < state.downloadProgress) {
-          r = 0;
-          g = 255;
-          b = 0;
-        } else {
-          r = 20;
-          g = 0;
-          b = 0;
+        if (pos.group?.includes('Number Row')) {
+            const keyPercent = (pos.col / 13) * 100;
+            if (keyPercent < state.downloadProgress) {
+                r = 0; g = 255; b = 0;
+            } else {
+                r = 20; g = 0; b = 0;
+            }
         }
-      }
     }
 
     return { r, g, b };
-  }
+}
 
-  return render;
-})();
-
+return render;
 })(),
         layer5_fx: (function(){
-(function () {
-  function render(state, pos, _tick, currentColor) {
+function render(state, pos, _tick, currentColor) {
     if (!pos || !state) return currentColor || { r: 0, g: 0, b: 0 };
     let { r, g, b } = currentColor || { r: 0, g: 0, b: 0 };
     const { keyId } = pos;
 
-    // --- 1. Audio FX (Replaces background if active) ---
+    // --- 1. Audio FX ---
     const audioFx = state.widgets?.audioFx;
     const audioMode = audioFx?.mode;
     const audioPeak = state.fx?.audioPeak || 0;
 
     if (audioFx?.enabled && audioMode === 'Rows (Loudness)') {
-      const threshold = audioPeak * 22;
-      if (pos.col < threshold) {
-        const t = pos.col / 22;
-        let ar = 0, ag = 0, ab = 0;
+        const threshold = audioPeak * 22;
+        if (pos.col < threshold) {
+            const t = pos.col / 22;
+            let ar = 0, ag = 0, ab = 0;
 
-        if (t < 0.5) {
-          ar = Math.floor((t * 2) * 255);
-          ag = 255;
-        } else {
-          ar = 255;
-          ag = Math.floor((1 - (t - 0.5) * 2) * 255);
+            if (t < 0.5) {
+                ar = Math.floor((t * 2) * 255); ag = 255;
+            } else {
+                ar = 255; ag = Math.floor((1 - (t - 0.5) * 2) * 255);
+            }
+            // Audio overwrites previous layers
+            r = ar; g = ag; b = ab;
         }
-        // Audio overrides whatever was below it
-        r = ar; g = ag; b = ab;
-      }
     }
 
-    // --- 2. Typing FX (Additive Blend) ---
-    // No 'else' here. We want flashes ON TOP of the audio meter.
-    
-    const runtime = state.__fxRuntime; // Should be init in godMode.js
+    // --- 2. Typing FX (Additive) ---
+    const runtime = state.__fxRuntime;
     const activeFades = runtime?.activeFades;
-    
+
     if (activeFades?.has(keyId)) {
-      let intensity = activeFades.get(keyId);
-      const flash = 255 * intensity;
-      
-      // Additive Blend
-      r = Math.min(255, r + flash);
-      g = Math.min(255, g + flash);
-      b = Math.min(255, b + flash);
-      
-      // Decay Logic
-      intensity -= 0.1;
-      if (intensity <= 0) activeFades.delete(keyId);
-      else activeFades.set(keyId, intensity);
+        let intensity = activeFades.get(keyId);
+        const flash = 255 * intensity;
+
+        r = Math.min(255, r + flash);
+        g = Math.min(255, g + flash);
+        b = Math.min(255, b + flash);
+
+        const typingFx = state.widgets?.typingFx || {};
+        const decayRate = typingFx.intensity || 0.1;
+
+        intensity -= decayRate;
+        if (intensity <= 0) activeFades.delete(keyId);
+        else activeFades.set(keyId, intensity);
     }
 
     return { r, g, b };
-  }
+}
 
-  return render;
-})();
+return render;
 })()
     }
 };

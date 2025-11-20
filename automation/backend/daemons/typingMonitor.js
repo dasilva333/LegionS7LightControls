@@ -36,14 +36,18 @@ async function refreshState() {
     // Ensure we access the widget/fx config correctly based on your schema
     // Assuming: widgets.fx_typing.enabled or similar?
     // Or maybe stored under `effectSettings` if you simplified it?
-    
+
     // For now, let's assume it's under widgets.typingFx based on the frontend card name
-    const fxConfig = dbState.widgets?.typingFx || {}; 
+    const fxConfig = dbState.widgets?.typingFx || {};
     currentState.enabled = fxConfig.enabled || false;
+
+    // Dynamic refresh rate
+    const refreshRate = fxConfig.refreshRate || 2000;
+    setTimeout(refreshState, refreshRate);
 }
 
-// Poll for config changes every few seconds (or rely on backend to restart daemon? Polling is safer for now)
-setInterval(refreshState, 2000);
+// Start the loop
+refreshState();
 
 uIOhook.on('keydown', (e) => {
     if (!currentState.enabled) return;
@@ -52,7 +56,7 @@ uIOhook.on('keydown', (e) => {
     if (lenovoName) {
         // Fire and forget
         // console.log('[TypingDaemon] Flashing key:', lenovoName);
-        sendCommand('flashKey', lenovoName).catch(() => {});
+        sendCommand('flashKey', lenovoName).catch(() => { });
     }
 });
 

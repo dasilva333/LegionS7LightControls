@@ -14,6 +14,8 @@ let isFridaReady = false;
 let messageQueue = []; 
 const GOLDEN_BUFFER_PATH = path.join(__dirname, 'golden_details.bin');
 const KEY_GROUPS = require('../seeds/key_groups.json');
+const GODMODE_DIRECTORY = path.join(__dirname, 'godmode');
+const GODMODE_PLACEHOLDER = '/* __GODMODE_MODULES__ */ {}';
 
 function buildAgentScript() {
     console.log('[FridaLoader] Building agent script from source files...');
@@ -21,11 +23,11 @@ function buildAgentScript() {
     let script = fs.readFileSync(AGENT_CORE_PATH, 'utf8');
     
     // --- Buffer Injection ---
-    if (fs.existsSync(GOLDEN_BUFFER_PATH)) {
-        console.log(`[FridaLoader] Found golden buffer.`);
-        const buffer = fs.readFileSync(GOLDEN_BUFFER_PATH);
-        const bufferString = Array.from(buffer).join(',');
-        script = script.replace('// __GOLDEN_DETAILS_BUFFER__', bufferString);
+        if (fs.existsSync(GOLDEN_BUFFER_PATH)) {
+            console.log(`[FridaLoader] Found golden buffer.`);
+            const buffer = fs.readFileSync(GOLDEN_BUFFER_PATH);
+            const bufferString = Array.from(buffer).join(',');
+            script = script.replace('// __GOLDEN_DETAILS_BUFFER__', bufferString);
     } else {
         script = script.replace('// __GOLDEN_DETAILS_BUFFER__', '');
     }
@@ -36,9 +38,6 @@ function buildAgentScript() {
     
      // --- NEW: Initial State Injection ---
     script = script.replace('/* __INITIAL_STATE__ */ {}', JSON.stringify(DEFAULT_GODMODE_STATE));
-
-    // Debug write
-    fs.writeFileSync(path.join(__dirname, 'temp_agent.js'), script);
     
     // Inject actions
     try {
@@ -51,7 +50,48 @@ function buildAgentScript() {
     } catch (e) {
         console.error(`[FridaLoader] ERROR: Could not read actions directory.`, e);
     }
+
+    // --- GOD MODE MODULES ---
+    const godModeModules = buildGodModeModules();
+    script = script.replace(GODMODE_PLACEHOLDER, godModeModules);
+
+    // Debug write
+    fs.writeFileSync(path.join(__dirname, 'temp_agent_script.js'), script);
+
     return script;
+}
+
+function readGodModeFiles(dir) {
+    if (!fs.existsSync(dir)) return [];
+    return fs.readdirSync(dir)
+        .filter((file) => file.endsWith('.js'))
+        .sort();
+}
+
+function buildGodModeModules() {
+    const utilsDir = path.join(GODMODE_DIRECTORY, 'utils');
+    const layersDir = path.join(GODMODE_DIRECTORY, 'layers');
+
+    const utilsFiles = readGodModeFiles(utilsDir);
+    const layerFiles = readGodModeFiles(layersDir);
+    console.log("[FridaLoader] Bundling Layers:", layerFiles); // <--- ADD THIS
+
+    const utilsEntries = utilsFiles.map((file) => {
+        const key = path.basename(file, '.js');
+        const code = fs.readFileSync(path.join(utilsDir, file), 'utf8');
+        return `${key}: (function(){\n${code}\n})()`;
+    });
+
+    const layerEntries = layerFiles.map((file) => {
+        const key = path.basename(file, '.js');
+        const code = fs.readFileSync(path.join(layersDir, file), 'utf8');
+        return `${key}: (function(){\n${code}\n})()`;
+    });
+
+    const utilsBlock = utilsEntries.length ? `{\n        ${utilsEntries.join(',\n        ')}\n    }` : '{}';
+    const layersBlock = layerEntries.length ? `{\n        ${layerEntries.join(',\n        ')}\n    }` : '{}';
+
+    return `{\n    utils: ${utilsBlock},\n    layers: ${layersBlock}\n}`;
 }
 
 async function initializeFrida() {
@@ -88,7 +128,7 @@ async function initializeFrida() {
             }
         });
 
-        fs.writeFileSync(path.join(__dirname, 'temp_agent_2.js'), agentSource);
+        fs.writeFileSync(path.join(__dirname, 'temp_agent_runtime.js'), agentSource);
 
         await script.load();
         agentApi = script.exports;

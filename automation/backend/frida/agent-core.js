@@ -50,6 +50,7 @@ context.goldenBuffers.details = new Uint8Array([
 // FIX: Removed [] brackets here. The loader injects the full array string.
 context.keyGroups = /* __KEY_GROUPS__ */ [];
 context.initialState = /* __INITIAL_STATE__ */ {};
+context.godMode = /* __GODMODE_MODULES__ */ {};
 
 function defineNativeFunction(name, definition) {
     if (context.nativeFunctions[name] || !context.baseAddress) return;

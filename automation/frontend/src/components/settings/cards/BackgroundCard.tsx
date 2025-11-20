@@ -24,8 +24,9 @@ type BackgroundCardProps = {
   disabled?: boolean;
 };
 
-type Mode = "none" | "time" | "effect";
-type EffectType = "Ripple" | "Wave" | "Fade" | "Checkerboard";
+type Mode = "none" | "effect"; // Removed 'time'
+type EffectType = "Solid" | "Ripple" | "Wave" | "Fade" | "Checkerboard" | "Sonar" | "Raindrops" | "Heatmap";
+type ColorSource = "Static" | "Time of Day" | "Spectrum";
 
 type GradientResponse = {
   id: number;
@@ -41,9 +42,10 @@ type GradientResponse = {
 
 type GodModeStateResponse = {
   backgroundMode?: Mode;
-  timeUpdateRate?: number;
+  // Removed timeUpdateRate from root, kept in effectSettings if needed
   effectSettings?: {
     effectType?: string;
+    colorSource?: string; // New Field
     baseColor?: string;
     speed?: number;
   };
@@ -51,15 +53,21 @@ type GodModeStateResponse = {
 
 const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
   const [mode, setMode] = useState<Mode>("none");
-  const [updateRate, setUpdateRate] = useState(1);
-  const [effectType, setEffectType] = useState<EffectType>("Ripple");
+  
+  // Effect Settings
+  const [effectType, setEffectType] = useState<EffectType>("Solid");
+  const [colorSource, setColorSource] = useState<ColorSource>("Static");
   const [effectSpeed, setEffectSpeed] = useState(3);
   const [baseColor, setBaseColor] = useState("#0070FF");
+  
+  // Time Gradient Data
   const [gradients, setGradients] = useState<GradientResponse[]>([]);
   const [isLoadingState, setIsLoadingState] = useState(true);
   const [isLoadingGradients, setIsLoadingGradients] = useState(true);
 
-  const effectTypes: EffectType[] = ["Ripple", "Wave", "Fade", "Checkerboard"];
+  const effectTypes: EffectType[] = ["Solid", "Ripple", "Wave", "Fade", "Checkerboard", "Sonar", "Raindrops", "Heatmap"];
+  const colorSources: ColorSource[] = ["Static", "Time of Day", "Spectrum"];
+  
   const controlsDisabled = disabled || isLoadingState;
 
   const normalizeGradient = (gradient: GradientResponse) => ({
@@ -72,14 +80,23 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
 
   const fetchState = async () => {
     try {
-      const data = await apiClient.get<GodModeStateResponse>(
-        "/api/godmode/state"
-      );
-      if (data.backgroundMode) setMode(data.backgroundMode);
-      if (typeof data.timeUpdateRate === "number")
-        setUpdateRate(data.timeUpdateRate);
+      const data = await apiClient.get<GodModeStateResponse>("/api/godmode/state");
+      
+      // Migrate old 'time' mode to 'effect' mode with source 'Time of Day'
+      let bgMode = data.backgroundMode;
+      if (bgMode as any === 'time') bgMode = 'effect'; 
+      if (bgMode) setMode(bgMode);
+
       const fx = data.effectSettings || {};
       if (fx.effectType) setEffectType(fx.effectType as EffectType);
+      if (fx.colorSource) setColorSource(fx.colorSource as ColorSource);
+      
+      // If migrating from old Time Mode, force settings
+      if (data.backgroundMode as any === 'time') {
+          setEffectType('Solid');
+          setColorSource('Time of Day');
+      }
+
       if (typeof fx.speed === "number") setEffectSpeed(fx.speed);
       if (fx.baseColor) setBaseColor(fx.baseColor);
     } catch (error) {
@@ -106,21 +123,22 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
   }, []);
 
   const persistState = async (partial: Record<string, unknown>) => {
+    // Always ensure we are saving the full effect object to avoid partial overwrites
+    const currentEffectSettings = {
+        effectType,
+        colorSource,
+        baseColor,
+        speed: effectSpeed
+    };
+    
+    // If partial contains effectSettings, merge it
+    const mergedSettings = { ...currentEffectSettings, ...(partial.effectSettings as object) };
+
     try {
-      const response = await apiClient.post<{ state?: GodModeStateResponse }>(
-        "/api/godmode/state",
-        partial
-      );
-      if (response?.state) {
-        const next = response.state;
-        if (next.backgroundMode) setMode(next.backgroundMode);
-        if (typeof next.timeUpdateRate === "number")
-          setUpdateRate(next.timeUpdateRate);
-        const fx = next.effectSettings || {};
-        if (fx.effectType) setEffectType(fx.effectType as EffectType);
-        if (typeof fx.speed === "number") setEffectSpeed(fx.speed);
-        if (fx.baseColor) setBaseColor(fx.baseColor);
-      }
+      await apiClient.post("/api/godmode/state", {
+          ...partial,
+          effectSettings: mergedSettings
+      });
     } catch (error) {
       console.error("[BackgroundCard] Failed to update state", error);
     }
@@ -131,33 +149,25 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
     persistState({ backgroundMode: newMode });
   };
 
-  const handleUpdateRateChange = (value?: string | number | null) => {
-    const parsed = Number(value ?? updateRate);
-    const nextRate = Number.isNaN(parsed) ? updateRate : Math.max(1, parsed);
-    setUpdateRate(nextRate);
-    persistState({ timeUpdateRate: nextRate });
-  };
-
   const handleEffectTypeChange = (value: EffectType) => {
     setEffectType(value);
-    persistState({
-      effectSettings: { effectType: value, baseColor, speed: effectSpeed },
-    });
+    persistState({ effectSettings: { effectType: value } });
+  };
+
+  const handleColorSourceChange = (value: ColorSource) => {
+    setColorSource(value);
+    persistState({ effectSettings: { colorSource: value } });
   };
 
   const handleEffectSpeedChange = (value?: number | null) => {
     const nextSpeed = typeof value === "number" ? value : effectSpeed;
     setEffectSpeed(nextSpeed);
-    persistState({
-      effectSettings: { effectType, baseColor, speed: nextSpeed },
-    });
+    persistState({ effectSettings: { speed: nextSpeed } });
   };
 
   const handleBaseColorChange = (color: string) => {
     setBaseColor(color);
-    persistState({
-      effectSettings: { effectType, baseColor: color, speed: effectSpeed },
-    });
+    persistState({ effectSettings: { baseColor: color } });
   };
 
   // --- Helper: Convert 24h "HH:MM" to 12h "h:MM AM/PM" ---
@@ -170,27 +180,10 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
     return `${formattedHour}:${minutes} ${ampm}`;
   };
 
-  const renderTimeContent = () => (
-    <>
-      <IonItem className="update-rate-item">
-        <IonLabel>Update Rate</IonLabel>
-        <IonInput
-          slot="end"
-          type="number"
-          min="1"
-          value={updateRate}
-          onIonChange={(event) => handleUpdateRateChange(event.detail.value)}
-          disabled={controlsDisabled}
-          style={{ textAlign: "right", maxWidth: "60px" }}
-        />
-        <IonNote slot="end" className="ion-margin-start">
-          min
-        </IonNote>
-      </IonItem>
-
-      <IonList inset>
+  const renderGradientsList = () => (
+    <IonList inset style={{ marginTop: '16px' }}>
         <IonListHeader>
-          <IonLabel>Gradient Schedule</IonLabel>
+          <IonLabel>Time of Day Schedule</IonLabel>
         </IonListHeader>
 
         {isLoadingGradients && (
@@ -202,15 +195,7 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
         {!isLoadingGradients &&
           gradients.map((gradient) => (
             <IonItem key={gradient.id} className="gradient-item">
-              {/* Time Column */}
-              <div
-                style={{
-                  minWidth: "90px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "4px",
-                }}
-              >
+              <div style={{ minWidth: "90px", display: "flex", flexDirection: "column", gap: "4px" }}>
                 <IonText style={{ fontWeight: 600, fontSize: "0.9rem" }}>
                   {formatTime(gradient.startTime || '')}
                 </IonText>
@@ -219,94 +204,92 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
                 </IonText>
               </div>
 
-              {/* Visual Gradient Bar */}
               <div
                 style={{
                   flex: 1,
                   height: "24px",
                   margin: "0 16px",
                   borderRadius: "6px",
-                  // This CSS gradient visually represents the transition
                   background: `linear-gradient(to right, ${gradient.startRgb}, ${gradient.endRgb})`,
                   boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.15)",
                 }}
-                title={`${gradient.startRgb} -> ${gradient.endRgb}`}
               />
 
-              {/* Actions */}
-              <IonButton size="small" fill="clear" disabled={controlsDisabled}>
-                Edit
-              </IonButton>
-              <IonButton
-                size="small"
-                fill="clear"
-                color="danger"
-                disabled={controlsDisabled}
-              >
-                <IonIcon icon={trashOutline} slot="icon-only" />{" "}
-                {/* Assuming you import trashOutline */}
+              <IonButton size="small" fill="clear" disabled={controlsDisabled}>Edit</IonButton>
+              <IonButton size="small" fill="clear" color="danger" disabled={controlsDisabled}>
+                <IonIcon icon={trashOutline} slot="icon-only" />
               </IonButton>
             </IonItem>
           ))}
-      </IonList>
-
-      <IonButton
-        expand="block"
-        fill="outline"
-        className="ion-margin"
-        disabled={controlsDisabled}
-      >
-        + Add New Gradient
-      </IonButton>
-    </>
+        <IonButton expand="block" fill="outline" className="ion-margin-top" disabled={controlsDisabled}>
+            + Add New Gradient
+        </IonButton>
+    </IonList>
   );
 
   const renderEffectContent = () => (
     <>
       <IonItem>
-        <IonLabel>Effect Type</IonLabel>
+        <IonLabel>Effect Pattern</IonLabel>
         <IonSelect
           interface="popover"
           value={effectType}
-          onIonChange={(event) =>
-            handleEffectTypeChange(
-              (event.detail.value as EffectType) || "Ripple"
-            )
-          }
+          onIonChange={(e) => handleEffectTypeChange(e.detail.value)}
           disabled={controlsDisabled}
         >
           {effectTypes.map((type) => (
-            <IonSelectOption key={type} value={type}>
-              {type}
-            </IonSelectOption>
+            <IonSelectOption key={type} value={type}>{type}</IonSelectOption>
           ))}
         </IonSelect>
       </IonItem>
-      <IonItem lines="none">
-        <IonLabel>Base Color</IonLabel>
-        <ColorPicker
-          value={baseColor}
-          onChange={handleBaseColorChange}
-          disabled={controlsDisabled}
-        />
-      </IonItem>
+
       <IonItem>
-        <IonLabel>Speed</IonLabel>
-        <IonRange
-          pin
-          value={effectSpeed}
-          min={1}
-          max={5}
-          step={1}
-          onIonChange={(event) =>
-            handleEffectSpeedChange(Number(event.detail.value ?? effectSpeed))
-          }
+        <IonLabel>Color Source</IonLabel>
+        <IonSelect
+          interface="popover"
+          value={colorSource}
+          onIonChange={(e) => handleColorSourceChange(e.detail.value)}
           disabled={controlsDisabled}
         >
-          <IonLabel slot="start">Slow</IonLabel>
-          <IonLabel slot="end">Fast</IonLabel>
-        </IonRange>
+          {colorSources.map((src) => (
+            <IonSelectOption key={src} value={src}>{src}</IonSelectOption>
+          ))}
+        </IonSelect>
       </IonItem>
+
+      {/* Dynamic Color Controls based on Source */}
+      {colorSource === "Static" && (
+          <IonItem lines="none">
+            <IonLabel>Base Color</IonLabel>
+            <ColorPicker
+              value={baseColor}
+              onChange={handleBaseColorChange}
+              disabled={controlsDisabled}
+            />
+          </IonItem>
+      )}
+
+      {/* Speed Slider (Hidden for Solid Static, but shown for Solid+Spectrum or Wave) */}
+      {(effectType !== 'Solid' || colorSource === 'Spectrum') && (
+          <IonItem>
+            <IonLabel>Speed</IonLabel>
+            <IonRange
+              pin
+              value={effectSpeed}
+              min={1}
+              max={5}
+              step={1}
+              onIonChange={(e) => handleEffectSpeedChange(Number(e.detail.value))}
+              disabled={controlsDisabled}
+            >
+              <IonLabel slot="start">Slow</IonLabel>
+              <IonLabel slot="end">Fast</IonLabel>
+            </IonRange>
+          </IonItem>
+      )}
+
+      {/* Show Gradient List only if Time of Day is selected */}
+      {colorSource === "Time of Day" && renderGradientsList()}
     </>
   );
 
@@ -324,24 +307,17 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
         <IonSegmentButton value="none">
           <IonLabel>None</IonLabel>
         </IonSegmentButton>
-        <IonSegmentButton value="time">
-          <IonLabel>Time of Day</IonLabel>
-        </IonSegmentButton>
         <IonSegmentButton value="effect">
-          <IonLabel>Effect</IonLabel>
+          <IonLabel>Active</IonLabel> {/* Renamed from Effect to Active since it encompasses all */}
         </IonSegmentButton>
       </IonSegment>
 
       {mode === "none" && (
         <IonItem lines="none">
-          <IonText color="medium">
-            Background layer is disabled. Unassigned keys will remain off
-            (black).
-          </IonText>
+          <IonText color="medium">Background layer disabled.</IonText>
         </IonItem>
       )}
 
-      {mode === "time" && renderTimeContent()}
       {mode === "effect" && renderEffectContent()}
     </LayerCard>
   );

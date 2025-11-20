@@ -7,18 +7,18 @@ let isActive = false;
 let currentSourceType = null; // Track what we are currently listening to
 
 // Config
-const SENSITIVITY = 1.5; 
-const DECAY = 0.15;      
+let currentSensitivity = 3.5;
+let currentDecay = 0.15;
 
 let currentPeak = 0;
 
 function getAudioDevice(targetSource) {
     const devices = portAudio.getDevices();
-    
+
     if (targetSource === 'Windows Audio') {
         // Try to find ANY 'Stereo Mix' that isn't WDM-KS
-        const safeMix = devices.find(d => 
-            d.name.includes('Stereo Mix') && 
+        const safeMix = devices.find(d =>
+            d.name.includes('Stereo Mix') &&
             d.hostAPIName !== 'Windows WDM-KS'
         );
         if (safeMix) return safeMix;
@@ -29,9 +29,9 @@ function getAudioDevice(targetSource) {
 
     // Fallback: Pick the Microphone (WASAPI)
     // This usually works reliably.
-    return devices.find(d => 
-        d.hostAPIName === 'Windows WASAPI' && 
-        d.maxInputChannels > 0 && 
+    return devices.find(d =>
+        d.hostAPIName === 'Windows WASAPI' &&
+        d.maxInputChannels > 0 &&
         d.name.includes('Microphone')
     );
 }
@@ -74,20 +74,20 @@ async function startAudio(sourceType) {
                 sum += int16 * int16;
             }
             const rms = Math.sqrt(sum / len);
-            let val = (rms / 32768) * SENSITIVITY;
+            let val = (rms / 32768) * currentSensitivity;
             if (val > 1.0) val = 1.0;
 
             // Smoothing
             if (val > currentPeak) {
                 currentPeak = val;
             } else {
-                currentPeak -= DECAY;
+                currentPeak -= currentDecay;
                 if (currentPeak < 0) currentPeak = 0;
             }
 
             // Send to Frida
             if (currentPeak > 0.01) {
-                 sendCommand('updateState', { fx: { audioPeak: currentPeak } }).catch(() => {});
+                sendCommand('updateState', { fx: { audioPeak: currentPeak } }).catch(() => { });
             }
         });
 
@@ -103,6 +103,13 @@ setInterval(async () => {
     const config = state.widgets?.audioFx || {};
     const enabled = state.active && config.enabled;
     const targetSource = config.source || 'Windows Audio';
+
+    if (config.sensitivity) {
+        currentSensitivity = config.sensitivity;
+    }
+    if (config.decay) {
+        currentDecay = config.decay;
+    }
 
     if (enabled) {
         if (!ai || currentSourceType !== targetSource) {

@@ -20,6 +20,7 @@ require('./daemons/weatherMonitor');
 require("./daemons/typingMonitor");
 require('./daemons/processMonitor');
 require('./daemons/audioMonitor');
+require('./daemons/timeKeeper');
 // -------------------------
 
 const apiDir = path.join(__dirname, "api");
