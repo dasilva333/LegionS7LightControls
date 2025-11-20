@@ -27,7 +27,7 @@ import './Settings.css';
 
 const settingsSupports = {
   safetyMonitor: false,
-  audioFx: false
+  audioFx: true
 };
 
 const Settings: React.FC = () => {

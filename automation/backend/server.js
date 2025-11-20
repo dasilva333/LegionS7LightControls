@@ -18,8 +18,8 @@ require('./frida/proxy.js');
 require('./daemons/godModeDirector');
 require('./daemons/weatherMonitor');
 require("./daemons/typingMonitor");
-// require('./daemons/timeOfDay.js');
 require('./daemons/processMonitor');
+require('./daemons/audioMonitor');
 // -------------------------
 
 const apiDir = path.join(__dirname, "api");

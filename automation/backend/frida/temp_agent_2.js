@@ -514,7 +514,39 @@ registerAction(({
                                 }
 
                                 // === LAYER 5: FX ===
-                                if (activeFades.has(keyId)) {
+                                const audioMode = state.widgets.audioFx?.mode;
+                                const audioPeak = state.fx?.audioPeak || 0;
+
+                                 if (state.widgets.audioFx?.enabled && audioMode === 'Rows (Loudness)') {
+                                    // Geometry Logic:
+                                    // We treat the keyboard as having ~22 columns max.
+                                    // We ignore the row, just fill left-to-right based on col index.
+                                    
+                                    // Map peak (0.0-1.0) to column threshold (0-22)
+                                    const threshold = audioPeak * 22; 
+                                    
+                                    if (pos.col < threshold) {
+                                        // Gradient Logic: Green -> Yellow -> Red
+                                        // 0-50% (0-11 cols): Green -> Yellow
+                                        // 50-100% (11-22 cols): Yellow -> Red
+                                        
+                                        const t = pos.col / 22;
+                                        let ar=0, ag=0, ab=0;
+                                        
+                                        if (t < 0.5) {
+                                            // Green -> Yellow
+                                            ar = Math.floor((t * 2) * 255);
+                                            ag = 255;
+                                        } else {
+                                            // Yellow -> Red
+                                            ar = 255;
+                                            ag = Math.floor((1 - (t - 0.5) * 2) * 255);
+                                        }
+                                        
+                                        // Overlay (Replace background)
+                                        r = ar; g = ag; b = ab;
+                                    }
+                                } else if (activeFades.has(keyId)) {
                                     let intensity = activeFades.get(keyId);
                                     const flash = 255 * intensity;
                                     r = Math.min(255, r + flash);

@@ -126,6 +126,13 @@ async function getGodModeState() {
     };
   }
 
+  if (widgetConfigs.fxAudio) { // Matches frontend ID
+    baseState.widgets.audioFx = { // Standardize state key to 'audioFx'
+      ...baseState.widgets.audioFx,
+      ...widgetConfigs.fxAudio
+    };
+  }
+
   return baseState;
 }
 

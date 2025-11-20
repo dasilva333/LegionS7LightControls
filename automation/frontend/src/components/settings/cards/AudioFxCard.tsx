@@ -10,7 +10,7 @@ type AudioFxCardProps = {
 
 type AudioConfig = {
   enabled?: boolean;
-  mode?: 'Ripple' | 'Rows (EQ)';
+  mode?: 'Ripple' | 'Rows (EQ)' | 'Rows (Loudness)';
   source?: 'Windows Audio' | 'Microphone' | 'Both';
 };
 
@@ -25,7 +25,7 @@ const AudioFxCard: React.FC<AudioFxCardProps> = ({ disabled }) => {
   const [mode, setMode] = useState<AudioConfig['mode']>(DEFAULT_CONFIG.mode);
   const [source, setSource] = useState<AudioConfig['source']>(DEFAULT_CONFIG.source);
   const [loading, setLoading] = useState(true);
-  const widgetId = 'fx_audio';
+  const widgetId = 'fxAudio';
 
   const controlsDisabled = disabled || !enabled || loading;
 
@@ -81,6 +81,7 @@ const AudioFxCard: React.FC<AudioFxCardProps> = ({ disabled }) => {
         >
           <IonSelectOption value="Ripple">Ripple</IonSelectOption>
           <IonSelectOption value="Rows (EQ)">Rows (EQ)</IonSelectOption>
+          <IonSelectOption value="Rows (Loudness)">Rows (Loudness)</IonSelectOption>
         </IonSelect>
       </IonItem>
       <IonItem lines="none" className="audio-card__item">
