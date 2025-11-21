@@ -1,161 +1,272 @@
 const portAudio = require('naudiodon');
+const fft = require('fft-js'); // npm install fft-js
 const { sendCommand } = require('../frida/proxy');
 const { getGodModeState } = require('../services/godmodeConfigStore');
 
+// --- CONFIG ---
+const SAMPLE_RATE = 44100; // Standardize on 44.1k
+const FFT_SIZE = 1024;
+const REFRESH_RATE = 30;   // ~30ms update rate
+
+// FFT Scaling
+const MIN_DB = -80;
+const MAX_DB = -10;
+
+// --- STATE ---
 let ai = null;
 let isActive = false;
 let currentSourceType = null;
+let currentMode = null; // 'Rows (Loudness)' or 'Rows (EQ)'
+let processingInterval = null;
 
 // Config
 let currentSensitivity = 3.5;
 let currentDecay = 0.15;
 
-let currentPeak = 0;
-let silenceTimeout = null;
+// Data Buffers
+let rawBuffer = [];          // Circular buffer for FFT
+let currentPeak = 0;         // For Loudness Mode
+let currentBands = [0, 0, 0, 0, 0, 0]; // For EQ Mode
+
+// --- HELPERS ---
+
+// 1. Hanning Window (Prevents spectral leakage)
+const windowTable = new Float32Array(FFT_SIZE);
+for (let i = 0; i < FFT_SIZE; i++) {
+    windowTable[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (FFT_SIZE - 1)));
+}
+
+// 2. Decibel Conversion
+function toDecibels(magnitude) {
+    if (magnitude <= 0) return MIN_DB;
+    return 20 * Math.log10(magnitude);
+}
 
 /**
  * Finds the correct audio device based on the target source type.
- * This function has been updated based on our debugging.
- * @param {('Windows Audio' | 'Microphone')} targetSource 
- * @returns {portAudio.Device | undefined}
  */
 function getAudioDevice(targetSource) {
     const devices = portAudio.getDevices();
     console.log(`[AudioDaemon] Searching for device for source: "${targetSource}"`);
 
     if (targetSource === 'Windows Audio') {
-        // --- CORRECTED LOGIC FOR SYSTEM AUDIO ---
-        // Find the "Stereo Mix" device, regardless of its API.
-        // We no longer block 'Windows WDM-KS' as it's often the correct one.
         const stereoMixDevice = devices.find(d =>
-            d.name.includes('Stereo Mix') &&
-            d.maxInputChannels > 0
+            d.name.includes('Stereo Mix') && d.maxInputChannels > 0
         );
-        
-        if (stereoMixDevice) {
-            console.log(`[AudioDaemon] Found Stereo Mix: [ID ${stereoMixDevice.id}] ${stereoMixDevice.name}`);
-            return stereoMixDevice;
-        }
-        
-        // Fallback for Stereo Mix: Use the default input device (ID 0)
-        // This works if the user has manually set Stereo Mix as default.
-        console.log("[AudioDaemon] Stereo Mix not found by name. Falling back to default system input (ID 0).");
+        if (stereoMixDevice) return stereoMixDevice;
         return devices.find(d => d.id === 0);
-
-    } else { // This handles 'Microphone' or any other value
-        // --- CORRECTED LOGIC FOR MICROPHONE ---
-        // The most reliable microphone is usually on the WASAPI host API.
+    } else { 
         const microphoneDevice = devices.find(d =>
             d.hostAPIName === 'Windows WASAPI' &&
             d.maxInputChannels > 0 &&
             d.name.includes('Microphone')
         );
-
-        if (microphoneDevice) {
-            console.log(`[AudioDaemon] Found Microphone: [ID ${microphoneDevice.id}] ${microphoneDevice.name}`);
-            return microphoneDevice;
-        }
-        
-        // If no WASAPI mic is found, fall back to the first available input that isn't Stereo Mix
+        if (microphoneDevice) return microphoneDevice;
         return devices.find(d => d.maxInputChannels > 0 && !d.name.includes('Stereo Mix'));
     }
 }
 
-
-async function startAudio(sourceType) {
+function startAudio(sourceType) {
     if (ai) {
         ai.quit();
         ai = null;
     }
+    if (processingInterval) {
+        clearInterval(processingInterval);
+        processingInterval = null;
+    }
 
     const device = getAudioDevice(sourceType);
     if (!device) {
-        // This error is now more meaningful.
-        console.error(`[AudioDaemon] Could not find a suitable device for source: "${sourceType}".`);
-        console.error(`[AudioDaemon] For 'Windows Audio', ensure 'Stereo Mix' is enabled in Sound Settings.`);
+        console.error(`[AudioDaemon] Could not find device for: "${sourceType}"`);
         return;
     }
 
-    // Use the sample rate reported by the device itself for max compatibility, default to 48000
-    const sampleRate = device.defaultSampleRate || 48000;
-    console.log(`[AudioDaemon] Starting Stream. Device: [ID ${device.id}] ${device.name} @ ${sampleRate}Hz`);
+    // We prioritize 44100 to match FFT expectations, but fallback to device default
+    const deviceRate = device.defaultSampleRate || SAMPLE_RATE;
+    console.log(`[AudioDaemon] Starting Stream on [${device.name}] @ ${deviceRate}Hz`);
+    
     currentSourceType = sourceType;
+    rawBuffer = []; // Reset buffer
 
     try {
         ai = new portAudio.AudioIO({
             inOptions: {
                 channelCount: 2,
                 sampleFormat: portAudio.SampleFormat16Bit,
-                sampleRate: sampleRate,
+                sampleRate: deviceRate,
                 deviceId: device.id,
                 closeOnError: false
             }
         });
 
+        // --- 1. FAST INPUT LOOP (Data Ingestion) ---
         ai.on('data', buffer => {
             if (!isActive) return;
 
-            let sum = 0;
-            const len = buffer.length / 2;
-            for (let i = 0; i < len; i++) {
-                const int16 = buffer.readInt16LE(i * 2);
-                sum += int16 * int16;
-            }
-            const rms = Math.sqrt(sum / len);
-            let val = (rms / 32768) * currentSensitivity;
-            if (val > 1.0) val = 1.0;
-
-            if (val > currentPeak) {
-                currentPeak = val;
-            } else {
-                currentPeak -= currentDecay;
-                if (currentPeak < 0) currentPeak = 0;
+            const numFrames = buffer.length / 4; // 2 channels * 2 bytes
+            
+            // We process audio into floats immediately to serve both RMS and FFT
+            for (let i = 0; i < numFrames; i++) {
+                // Read Stereo
+                const left = buffer.readInt16LE(i * 4) / 32768.0;
+                const right = buffer.readInt16LE(i * 4 + 2) / 32768.0;
+                
+                // Combine to Mono
+                const mono = (left + right) / 2;
+                
+                // Push to circular buffer
+                rawBuffer.push(mono);
             }
 
-            if (currentPeak > 0.01) {
-                sendCommand('updateState', { fx: { audioPeak: currentPeak } }).catch(() => {});
-
-                if (silenceTimeout) clearTimeout(silenceTimeout);
-                silenceTimeout = setTimeout(() => {
-                    currentPeak = 0;
-                    sendCommand('updateState', { fx: { audioPeak: 0 } }).catch(() => {});
-                }, 2000);
+            // Cap buffer size to prevent memory leaks (keep enough for FFT)
+            if (rawBuffer.length > 4096) {
+                rawBuffer = rawBuffer.slice(rawBuffer.length - FFT_SIZE);
             }
         });
 
         ai.start();
+
+        // --- 2. THROTTLED PROCESSING LOOP (Analysis) ---
+        processingInterval = setInterval(() => {
+            if (!isActive) return;
+
+            if (currentMode === 'Rows (EQ)') {
+                processEQ();
+            } else {
+                processLoudness();
+            }
+
+        }, REFRESH_RATE);
+
     } catch (e) {
-        console.error(`[AudioDaemon] Failed to start stream for device ID ${device.id}:`, e.message);
+        console.error(`[AudioDaemon] Stream Error:`, e.message);
     }
 }
 
-// Watchdog Loop
+// --- LOGIC: RMS LOUDNESS ---
+function processLoudness() {
+    // We use the rawBuffer to calculate RMS of the *latest* chunk
+    // To keep it responsive, we just look at the last ~500 samples
+    const sampleCount = 512;
+    if (rawBuffer.length < sampleCount) return;
+
+    const slice = rawBuffer.slice(rawBuffer.length - sampleCount);
+    
+    let sum = 0;
+    for (let i = 0; i < slice.length; i++) {
+        sum += slice[i] * slice[i];
+    }
+    const rms = Math.sqrt(sum / slice.length);
+
+    // Apply Sensitivity
+    let val = rms * currentSensitivity;
+    if (val > 1.0) val = 1.0;
+
+    // Smooth Peak (Attack/Decay)
+    if (val > currentPeak) {
+        currentPeak = val;
+    } else {
+        currentPeak -= currentDecay;
+        if (currentPeak < 0) currentPeak = 0;
+    }
+
+    // Send to Renderer
+    if (currentPeak > 0.001 || currentPeak === 0) {
+         sendCommand('updateState', { fx: { audioPeak: currentPeak } }).catch(() => {});
+    }
+}
+
+// --- LOGIC: FFT EQ ---
+function processEQ() {
+    if (rawBuffer.length < FFT_SIZE) return;
+
+    // 1. Get latest chunk
+    const slice = rawBuffer.slice(rawBuffer.length - FFT_SIZE);
+
+    // 2. Window Function
+    const windowed = slice.map((samp, i) => samp * windowTable[i]);
+
+    // 3. FFT
+    const phasors = fft.fft(windowed);
+    const magnitudes = fft.util.fftMag(phasors);
+
+    // 4. Map to Bands
+    // Freq ranges (approx for 44.1k/1024)
+    const ranges = [ 
+        [1, 3],     // Sub
+        [4, 8],     // Bass
+        [9, 20],    // Low Mid
+        [21, 50],   // Mid
+        [51, 110],  // High Mid
+        [111, 255]  // Treble
+    ];
+
+    // Map Sensitivity to dB Gain (e.g., slider 3.5 -> ~15dB boost)
+    const gainDB = currentSensitivity * 4; 
+
+    let hasData = false;
+
+    ranges.forEach((range, i) => {
+        let maxVal = 0;
+        for (let b = range[0]; b <= range[1] && b < magnitudes.length; b++) {
+            let normalized = magnitudes[b] / (FFT_SIZE / 2);
+            if (normalized > maxVal) maxVal = normalized;
+        }
+
+        let db = toDecibels(maxVal) + gainDB;
+        let percent = (db - MIN_DB) / (MAX_DB - MIN_DB);
+
+        if (percent < 0) percent = 0;
+        if (percent > 1) percent = 1;
+
+        // Attack / Decay
+        if (percent >= currentBands[i]) {
+            currentBands[i] = percent;
+        } else {
+            currentBands[i] -= currentDecay;
+            if (currentBands[i] < 0) currentBands[i] = 0;
+        }
+        
+        if(currentBands[i] > 0.01) hasData = true;
+    });
+
+    // Send to Renderer
+    // We always send if there is data, or occasionally to clear to 0
+    sendCommand('updateState', { fx: { audioBands: currentBands } }).catch(() => {});
+}
+
+
+// --- WATCHDOG ---
 setInterval(async () => {
     const state = await getGodModeState();
     const config = state.widgets?.audioFx || {};
     const enabled = state.active && config.enabled;
-    // Default to 'Windows Audio' if no source is specified.
+    
     const targetSource = config.source || 'Windows Audio'; 
+    const targetMode = config.mode || 'Rows (Loudness)';
 
-    if (config.sensitivity) {
-        currentSensitivity = config.sensitivity;
-    }
-    if (config.decay) {
-        currentDecay = config.decay;
-    }
+    // Update Configs
+    if (config.sensitivity) currentSensitivity = config.sensitivity;
+    if (config.decay) currentDecay = config.decay;
 
     if (enabled) {
+        isActive = true;
+        currentMode = targetMode;
+
+        // Restart stream if source changed OR device was lost
         if (!ai || currentSourceType !== targetSource) {
             startAudio(targetSource);
         }
-        isActive = true;
     } else {
         isActive = false;
+        // Clean up if we just turned it off
         if (ai) {
             console.log('[AudioDaemon] Disabling audio stream.');
             ai.quit();
             ai = null;
             currentSourceType = null;
+            if(processingInterval) clearInterval(processingInterval);
         }
     }
 }, 2000);
