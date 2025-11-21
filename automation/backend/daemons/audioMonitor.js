@@ -4,7 +4,7 @@ const { getGodModeState } = require('../services/godmodeConfigStore');
 
 let ai = null;
 let isActive = false;
-let currentSourceType = null; // Track what we are currently listening to
+let currentSourceType = null;
 
 // Config
 let currentSensitivity = 3.5;
@@ -13,32 +13,56 @@ let currentDecay = 0.15;
 let currentPeak = 0;
 let silenceTimeout = null;
 
+/**
+ * Finds the correct audio device based on the target source type.
+ * This function has been updated based on our debugging.
+ * @param {('Windows Audio' | 'Microphone')} targetSource 
+ * @returns {portAudio.Device | undefined}
+ */
 function getAudioDevice(targetSource) {
     const devices = portAudio.getDevices();
+    console.log(`[AudioDaemon] Searching for device for source: "${targetSource}"`);
 
     if (targetSource === 'Windows Audio') {
-        // Try to find ANY 'Stereo Mix' that isn't WDM-KS
-        const safeMix = devices.find(d =>
+        // --- CORRECTED LOGIC FOR SYSTEM AUDIO ---
+        // Find the "Stereo Mix" device, regardless of its API.
+        // We no longer block 'Windows WDM-KS' as it's often the correct one.
+        const stereoMixDevice = devices.find(d =>
             d.name.includes('Stereo Mix') &&
-            d.hostAPIName !== 'Windows WDM-KS'
+            d.maxInputChannels > 0
         );
-        if (safeMix) return safeMix;
+        
+        if (stereoMixDevice) {
+            console.log(`[AudioDaemon] Found Stereo Mix: [ID ${stereoMixDevice.id}] ${stereoMixDevice.name}`);
+            return stereoMixDevice;
+        }
+        
+        // Fallback for Stereo Mix: Use the default input device (ID 0)
+        // This works if the user has manually set Stereo Mix as default.
+        console.log("[AudioDaemon] Stereo Mix not found by name. Falling back to default system input (ID 0).");
+        return devices.find(d => d.id === 0);
 
-        // If no safe Stereo Mix, logging for debugging
-        // console.log("Stereo Mix candidates:", devices.filter(d => d.name.includes('Stereo Mix')));
+    } else { // This handles 'Microphone' or any other value
+        // --- CORRECTED LOGIC FOR MICROPHONE ---
+        // The most reliable microphone is usually on the WASAPI host API.
+        const microphoneDevice = devices.find(d =>
+            d.hostAPIName === 'Windows WASAPI' &&
+            d.maxInputChannels > 0 &&
+            d.name.includes('Microphone')
+        );
+
+        if (microphoneDevice) {
+            console.log(`[AudioDaemon] Found Microphone: [ID ${microphoneDevice.id}] ${microphoneDevice.name}`);
+            return microphoneDevice;
+        }
+        
+        // If no WASAPI mic is found, fall back to the first available input that isn't Stereo Mix
+        return devices.find(d => d.maxInputChannels > 0 && !d.name.includes('Stereo Mix'));
     }
-
-    // Fallback: Pick the Microphone (WASAPI)
-    // This usually works reliably.
-    return devices.find(d =>
-        d.hostAPIName === 'Windows WASAPI' &&
-        d.maxInputChannels > 0 &&
-        d.name.includes('Microphone')
-    );
 }
 
+
 async function startAudio(sourceType) {
-    // Clean up old stream if switching sources
     if (ai) {
         ai.quit();
         ai = null;
@@ -46,11 +70,15 @@ async function startAudio(sourceType) {
 
     const device = getAudioDevice(sourceType);
     if (!device) {
-        console.error(`[AudioDaemon] No device found for source: ${sourceType}`);
+        // This error is now more meaningful.
+        console.error(`[AudioDaemon] Could not find a suitable device for source: "${sourceType}".`);
+        console.error(`[AudioDaemon] For 'Windows Audio', ensure 'Stereo Mix' is enabled in Sound Settings.`);
         return;
     }
 
-    console.log(`[AudioDaemon] Starting Stream. Source: ${sourceType} -> Device: ${device.name}`);
+    // Use the sample rate reported by the device itself for max compatibility, default to 48000
+    const sampleRate = device.defaultSampleRate || 48000;
+    console.log(`[AudioDaemon] Starting Stream. Device: [ID ${device.id}] ${device.name} @ ${sampleRate}Hz`);
     currentSourceType = sourceType;
 
     try {
@@ -58,7 +86,7 @@ async function startAudio(sourceType) {
             inOptions: {
                 channelCount: 2,
                 sampleFormat: portAudio.SampleFormat16Bit,
-                sampleRate: 48000, // Safe standard
+                sampleRate: sampleRate,
                 deviceId: device.id,
                 closeOnError: false
             }
@@ -67,7 +95,6 @@ async function startAudio(sourceType) {
         ai.on('data', buffer => {
             if (!isActive) return;
 
-            // RMS Calculation
             let sum = 0;
             const len = buffer.length / 2;
             for (let i = 0; i < len; i++) {
@@ -78,7 +105,6 @@ async function startAudio(sourceType) {
             let val = (rms / 32768) * currentSensitivity;
             if (val > 1.0) val = 1.0;
 
-            // Smoothing
             if (val > currentPeak) {
                 currentPeak = val;
             } else {
@@ -86,22 +112,20 @@ async function startAudio(sourceType) {
                 if (currentPeak < 0) currentPeak = 0;
             }
 
-            // Send to Frida
             if (currentPeak > 0.01) {
-                sendCommand('updateState', { fx: { audioPeak: currentPeak } }).catch(() => { });
+                sendCommand('updateState', { fx: { audioPeak: currentPeak } }).catch(() => {});
 
-                // Reset silence timeout
                 if (silenceTimeout) clearTimeout(silenceTimeout);
                 silenceTimeout = setTimeout(() => {
                     currentPeak = 0;
-                    sendCommand('updateState', { fx: { audioPeak: 0 } }).catch(() => { });
+                    sendCommand('updateState', { fx: { audioPeak: 0 } }).catch(() => {});
                 }, 2000);
             }
         });
 
         ai.start();
     } catch (e) {
-        console.error('[AudioDaemon] Failed to start stream:', e.message);
+        console.error(`[AudioDaemon] Failed to start stream for device ID ${device.id}:`, e.message);
     }
 }
 
@@ -110,7 +134,8 @@ setInterval(async () => {
     const state = await getGodModeState();
     const config = state.widgets?.audioFx || {};
     const enabled = state.active && config.enabled;
-    const targetSource = config.source || 'Windows Audio';
+    // Default to 'Windows Audio' if no source is specified.
+    const targetSource = config.source || 'Windows Audio'; 
 
     if (config.sensitivity) {
         currentSensitivity = config.sensitivity;
@@ -121,15 +146,13 @@ setInterval(async () => {
 
     if (enabled) {
         if (!ai || currentSourceType !== targetSource) {
-            // Start or Restart if source changed
             startAudio(targetSource);
-            isActive = true;
-        } else {
-            isActive = true;
         }
+        isActive = true;
     } else {
         isActive = false;
         if (ai) {
+            console.log('[AudioDaemon] Disabling audio stream.');
             ai.quit();
             ai = null;
             currentSourceType = null;
