@@ -18,18 +18,17 @@ function render(state, pos, tick, currentColor, utils) {
             if (currentHour >= keyEnd) {
                 r = active.r; g = active.g; b = active.b;
             } else if (currentHour >= keyStart && currentHour < keyEnd) {
-                // const progress = (currentHour - keyStart) / 2;
-                // const pulse = Math.abs(Math.sin(tick * 0.05)) * (progress / 2);
-                // r = active.r * pulse + inactive.r * (1 - pulse);
-                // g = active.g * pulse + inactive.g * (1 - pulse);
-                // b = active.b * pulse + inactive.b * (1 - pulse);
+                const progress = (currentHour - keyStart) / 2;
+                const pulse = Math.abs(Math.sin(tick * 0.05)) * (progress / 2);
+                r = active.r * pulse + inactive.r * (1 - pulse);
+                g = active.g * pulse + inactive.g * (1 - pulse);
+                b = active.b * pulse + inactive.b * (1 - pulse);
                 // PRESENT: Breathe between Active and Inactive
                 // Math.sin goes -1 to 1. We map to 0.0 to 1.0.
-                const t = (Math.sin(tick * 0.05) + 1) / 2; 
-                
-                r = Math.floor(active.r * t + inactive.r * (1 - t));
-                g = Math.floor(active.g * t + inactive.g * (1 - t));
-                b = Math.floor(active.b * t + inactive.b * (1 - t));
+                // const t = (Math.sin(tick * 0.05) + 1) / 2;                 
+                // r = Math.floor(active.r * t + inactive.r * (1 - t));
+                // g = Math.floor(active.g * t + inactive.g * (1 - t));
+                // b = Math.floor(active.b * t + inactive.b * (1 - t));
             } else {
                 r = inactive.r; g = inactive.g; b = inactive.b;
             }
