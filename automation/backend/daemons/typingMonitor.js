@@ -2,8 +2,7 @@ const { uIOhook, UiohookKey } = require('uiohook-napi');
 const { sendCommand } = require('../frida/proxy');
 const { getGodModeState } = require('../services/godmodeConfigStore');
 
-// Standard mapping for common keys
-// You can expand this map later for Numpad/Special keys
+// --- KEY MAPPING ---
 const KEY_MAPPING = {
     [UiohookKey.Escape]: 'Esc',
     [UiohookKey.F1]: 'F1', [UiohookKey.F2]: 'F2', [UiohookKey.F3]: 'F3', [UiohookKey.F4]: 'F4',
@@ -29,36 +28,55 @@ const KEY_MAPPING = {
     [UiohookKey.PageUp]: 'PgUp', [UiohookKey.PageDown]: 'PgDn', [UiohookKey.PrintScreen]: 'PrtSc'
 };
 
-let currentState = { enabled: false };
+// --- STATE ---
+let currentState = { 
+    enabled: false,
+    effectStyle: 'Bounce' 
+};
 
 async function refreshState() {
-    const dbState = await getGodModeState();
-    // Ensure we access the widget/fx config correctly based on your schema
-    // Assuming: widgets.fx_typing.enabled or similar?
-    // Or maybe stored under `effectSettings` if you simplified it?
+    try {
+        const dbState = await getGodModeState();
+        const config = dbState.widgets?.typingFx || {};
+        
+        // Enable only if Global Active is TRUE AND Widget Enabled is TRUE
+        const globalActive = dbState.active !== false;
+        currentState.enabled = globalActive && (config.enabled || false);
+        currentState.effectStyle = config.effectStyle || 'Bounce';
 
-    // For now, let's assume it's under widgets.typingFx based on the frontend card name
-    const fxConfig = dbState.widgets?.typingFx || {};
-    currentState.enabled = fxConfig.enabled || false;
-
-    // Dynamic refresh rate
-    const refreshRate = fxConfig.refreshRate || 2000;
-    setTimeout(refreshState, refreshRate);
+        // Poll rate (default 2s)
+        const rate = config.refreshRate || 2000;
+        setTimeout(refreshState, rate);
+    } catch (e) {
+        console.error('[TypingDaemon] Config Sync Failed:', e.message);
+        setTimeout(refreshState, 5000);
+    }
 }
 
-// Start the loop
+// Start config loop
 refreshState();
 
+// --- INPUT LISTENER ---
 uIOhook.on('keydown', (e) => {
     if (!currentState.enabled) return;
 
-    const lenovoName = KEY_MAPPING[e.keycode];
-    if (lenovoName) {
-        // Fire and forget
-        // console.log('[TypingDaemon] Flashing key:', lenovoName);
-        sendCommand('flashKey', lenovoName).catch(() => { });
+    const keyName = KEY_MAPPING[e.keycode];
+    if (keyName) {
+        // We send 'flashKey' to the main process.
+        // The Main Process (godMode.js) decides whether to set 1.0 (Bounce)
+        // or add +0.2 (Heatmap) based on the current state it holds.
+        sendCommand('flashKey', keyName).catch(() => {
+            // Suppress socket errors (common during restarts)
+        });
     }
 });
 
+// Cleanup
+process.on('SIGINT', () => {
+    console.log('[TypingDaemon] Stopping...');
+    uIOhook.stop();
+    process.exit();
+});
+
 uIOhook.start();
-console.log('[TypingDaemon] Started. Listening for input...');
+console.log('[TypingDaemon] Started. Listening...');

@@ -11,7 +11,7 @@ type TypingFxCardProps = {
 
 type TypingConfig = {
   enabled?: boolean;
-  effectStyle?: 'Bounce' | 'Flash' | 'Rainbow Sparkle';
+  effectStyle?: 'Bounce' | 'Flash' | 'Rainbow Sparkle' | 'Heatmap';
   effectColor?: string;
   refreshRate?: number;
   intensity?: number;
@@ -95,6 +95,7 @@ const TypingFxCard: React.FC<TypingFxCardProps> = ({ disabled }) => {
           onIonChange={(event) => persist({ effectStyle: event.detail.value })}
           disabled={controlsDisabled}
         >
+          <IonSelectOption value="Heatmap">Heatmap</IonSelectOption>
           <IonSelectOption value="Bounce">Bounce</IonSelectOption>
           <IonSelectOption value="Flash">Flash</IonSelectOption>
           <IonSelectOption value="Rainbow Sparkle">Rainbow Sparkle</IonSelectOption>
@@ -115,14 +116,14 @@ const TypingFxCard: React.FC<TypingFxCardProps> = ({ disabled }) => {
         <IonLabel position="stacked">Intensity ({intensity})</IonLabel>
         <IonRange
           min={0.0}
-          max={0.5}
+          max={1}
           step={0.05}
           value={intensity}
           onIonChange={(e) => persist({ intensity: e.detail.value as number })}
           disabled={controlsDisabled}
         />
       </IonItem>
-      {showColorPicker && (
+      {showColorPicker && effectStyle != "Heatmap" && (
         <IonItem lines="none" className="typing-card__item">
           <IonLabel position="stacked">Effect Color</IonLabel>
           <ColorPicker

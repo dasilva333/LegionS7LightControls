@@ -205,6 +205,7 @@ function render(state, pos, tick, currentColor, utils) {
     const rawColorSource = settings.colorSource || (state.backgroundMode === 'TIME' ? 'TIME OF DAY' : 'STATIC');
     const colorSource = rawColorSource.toUpperCase();
 
+    // Ranges between 1 and 5
     const speed = settings.speed || 3;
 
     // --- STEP A: DETERMINE BASE COLOR ---
@@ -265,18 +266,62 @@ function render(state, pos, tick, currentColor, utils) {
     if (effectType === 'SOLID') {
         dim = 1.0;
     }
-    else if (effectType === 'WAVE' || effectType === 'RIPPLE') {
-        const wave = Math.sin((pos.col * 0.2) + (tick * 0.05 * speed));
-        dim = (wave + 1) / 2;
+    else if (effectType === 'WAVE') {
+        // Linear Left-to-Right Scan
+        // (pos.col * 0.25) defines the width of the wave (approx 1 full wave across keyboard)
+        // (tick * 0.1 * speed) moves the wave. Subtracting time makes it flow Right.
+        const val = Math.sin((pos.col * 0.25) - (tick * 0.1 * speed));
+
+        // Normalize sine (-1 to 1) to brightness (0 to 1)
+        dim = (val + 1) / 2;
+    }
+    else if (effectType === 'RIPPLE') {
+        // Circular/Radial Expansion
+        // Hardcoded center approx (Col 11, Row 3.5) fits most TKL/Full keyboards
+        const cx = 11;
+        const cy = 4;
+        const dx = pos.col - cx;
+        const dy = pos.row - cy;
+
+        // Pythagorean distance from center
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // (dist * 0.4) controls ring tightness
+        // Subtracting time makes the rings expand OUTWARD
+        const val = Math.sin((dist * 0.4) - (tick * 0.1 * speed));
+
+        dim = (val + 1) / 2;
     }
     else if (effectType === 'FADE' || effectType === 'BREATHING') {
         const pulse = Math.sin(tick * 0.02 * speed);
         dim = (pulse + 1) / 2;
     }
     else if (effectType === 'CHECKERBOARD' || effectType === 'CHECKER') {
-        const isEven = (pos.row + pos.col) % 2 === 0;
-        const invert = Math.floor(tick / (60 / speed)) % 2 === 1;
-        dim = ((isEven && !invert) || (!isEven && invert)) ? 1.0 : 0.0;
+        // 1. Define the checker pattern: 1 vs -1
+        // This determines which "Group" the key belongs to (Black vs White)
+        const patternSign = ((pos.row + pos.col) % 2 === 0) ? 1 : -1;
+
+        // 2. Determine "Sharpness" based on speed (Range 1-5)
+        // Speed 1 = Soft Sine Wave (Gain ~1.5)
+        // Speed 5 = Hard Square Wave (Gain ~55)
+        // We use Math.pow to make the high speeds get aggressive quickly
+        const sharpness = 0.5 + Math.pow(speed, 2.5);
+
+        // 3. Oscillate
+        // Standard Sine wave driven by time
+        const rawWave = Math.sin(tick * 0.05 * speed);
+
+        // 4. Apply Sharpness & Clamp
+        // Multiplying the sine wave makes the slope vertical (instant snap).
+        // Clamping limits it so it doesn't exceed valid brightness ranges.
+        let wave = rawWave * sharpness;
+        wave = Math.max(-1, Math.min(1, wave));
+
+        // 5. Combine
+        // If wave is +1 and pattern is +1, result is 1 (Bright)
+        // If wave is -1 and pattern is +1, result is -1 (Dark)
+        // Normalizing ((-1 to 1) + 1) / 2  ->  0.0 to 1.0
+        dim = ((wave * patternSign) + 1) / 2;
     }
     else if (effectType === 'SONAR') {
         const dx = pos.col - 10;
@@ -288,13 +333,33 @@ function render(state, pos, tick, currentColor, utils) {
         dim = (diff < 0.5) ? (1.0 - (diff * 2)) : 0.0;
     }
     else if (effectType === 'RAINDROPS') {
-        const seed = Math.floor(tick / (20 / speed)) * 1000 + pos.keyId;
-        const rand = Math.sin(seed) * 10000;
-        const isDrop = (rand - Math.floor(rand)) > 0.98;
-        const subTick = tick % (20 / speed);
-        dim = isDrop ? 1.0 : Math.max(0, 1.0 - (subTick * 0.1));
+        // 1. Create a pseudo-random offset per column so they don't fall in sync.
+        // We use Math.sin on the column index to get a deterministic "random" number.
+        const colOffset = Math.sin(pos.col * 9999) * 100;
+
+        // 2. Calculate "Time" vertically. 
+        // (tick * speed) moves the drop down. Subtracting pos.row makes it relate to physical space.
+        const verticalFlow = (tick * 0.2 * speed) + colOffset - pos.row;
+
+        // 3. Wrap the space to create repeating drops.
+        // 'spacing' is the vertical distance between drops in the same column.
+        const spacing = 20;
+        // Modulo math to create the loop. The extra logic ensures positive results.
+        const posInCycle = ((verticalFlow % spacing) + spacing) % spacing;
+
+        // 4. Draw the Drop
+        const tailLength = 8; // How long the trail is
+
+        if (posInCycle < tailLength) {
+            // 0 is the head (brightest), tailLength is the end (darkest)
+            const brightness = 1.0 - (posInCycle / tailLength);
+            // Square it (brightness^2) for a nicer "liquid" fade
+            dim = brightness * brightness;
+        } else {
+            dim = 0.0;
+        }
     }
-    else if (effectType === 'HEATMAP') {
+    else if (effectType === 'PULSE') {
         const dx = pos.col - 10;
         const dy = pos.row - 3;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -462,56 +527,132 @@ function render(state, pos, tick, currentColor, utils) {
                     }
                 }
             }
+        }else if (audioMode === 'Rows (Hybrid)') {
+            // --- HYBRID LOGIC (Lenovo Style) ---
+            // Row 0 (Top/F-Keys): RMS Loudness Meter
+            // Rows 1-5 (Num to Space): 5-Band EQ
+
+            if (pos.row === 0) {
+                // --- TOP ROW: RMS LOUDNESS ---
+                const threshold = audioPeak * 22;
+                
+                if (pos.col < threshold) {
+                    const t = pos.col / 22;
+                    // Standard Meter Gradient (Green -> Yellow -> Red)
+                    if (t < 0.5) { 
+                        r = Math.floor((t * 2) * 255); 
+                        g = 255; 
+                        b = 0; 
+                    } else { 
+                        r = 255; 
+                        g = Math.floor((1 - (t - 0.5) * 2) * 255); 
+                        b = 0; 
+                    }
+                }
+            } 
+            else {
+                // --- BOTTOM 5 ROWS: EQ BANDS ---
+                // Map Row 5 (Bottom) -> Band 0 (Sub)
+                // Map Row 1 (Numbers) -> Band 4 (High Mid)
+                const bandIndex = 5 - pos.row;
+
+                // We only use bands 0-4 from our 6-band array
+                if (bandIndex >= 0 && bandIndex < 5) {
+                    const level = audioBands[bandIndex];
+                    const threshold = level * 22;
+
+                    if (pos.col < threshold) {
+                        // Fixed Colors per Frequency Band
+                        switch (pos.row) {
+                            case 5: r = 0;   g = 255; b = 255; break; // Sub (Cyan)
+                            case 4: r = 0;   g = 0;   b = 255; break; // Bass (Blue)
+                            case 3: r = 0;   g = 255; b = 0;   break; // Lo-Mid (Green)
+                            case 2: r = 255; g = 255; b = 0;   break; // Mid (Yellow)
+                            case 1: r = 255; g = 0;   b = 0;   break; // Hi-Mid (Red)
+                        }
+                    }
+                }
+            }
         }
     }
 
     // --- 2. Typing FX ---
-    const runtime = state.__fxRuntime;
+     const runtime = state.__fxRuntime;
     const activeFades = runtime?.activeFades;
 
+    // Only process if this specific key has an active effect
     if (activeFades?.has(keyId)) {
-        // Config
+        
+        // --- CONFIG ---
         const typingFx = state.widgets?.typingFx || {};
         const style = typingFx.effectStyle || 'Bounce';
         const hexColor = typingFx.effectColor || '#FFAF00';
+        // baseDecay comes from the UI slider (usually 0.1)
         const baseDecay = typingFx.intensity || 0.1;
 
-        // Retrieve current state (Support legacy number or object storage)
+        // --- RETRIEVE KEY STATE ---
         let entry = activeFades.get(keyId);
+        // Normalize storage (Handle simple number vs complex object)
         let intensity = (typeof entry === 'number') ? entry : entry.intensity;
         let meta = (typeof entry === 'object') ? entry : {}; 
 
-        // --- PREPARE COLOR ---
+        // Variables for result
         let fxR = 0, fxG = 0, fxB = 0;
         let decayRate = baseDecay;
 
-        if (style === 'Rainbow Sparkle') {
-            // If this is the first frame (no hue saved), pick a RANDOM hue
-            if (meta.hue === undefined) {
-                meta.hue = Math.random(); // 0.0 to 1.0
+        // --- MODE LOGIC ---
+        if (style === 'Heatmap') {
+            // 1. HEATMAP COLOR LOGIC
+            // Map Intensity (0.0 - 1.0) to Gradient: Blue -> Yellow -> Red
+            
+            const colLow = { r: 135, g: 206, b: 250 };  // Light Sky Blue
+            const colMed = { r: 255, g: 255, b: 224 };  // Light Yellow
+            const colHigh = { r: 255, g: 0, b: 0 };     // Pure Red
+
+            let heatColor;
+            
+            if (intensity < 0.5) {
+                // First Half: Blue -> Yellow
+                // Map 0.0-0.5 to 0.0-1.0
+                const t = intensity * 2; 
+                heatColor = mix(colLow, colMed, t);
+            } else {
+                // Second Half: Yellow -> Red
+                // Map 0.5-1.0 to 0.0-1.0
+                const t = (intensity - 0.5) * 2;
+                heatColor = mix(colMed, colHigh, t);
             }
 
-            // Use the util function: hsvToRgb(h, s, v)
-            const spark = hsvToRgb(meta.hue, 1.0, 1.0);
-            fxR = spark.r;
-            fxG = spark.g;
-            fxB = spark.b;
+            fxR = heatColor.r;
+            fxG = heatColor.g;
+            fxB = heatColor.b;
 
-        } else {
-            // 'Bounce' and 'Flash' use the UI selected color
+            // 2. SLOW DECAY LOGIC
+            // We want it to last ~5 seconds.
+            // Normal decay (0.1) is fast. We scale it down significantly.
+            decayRate = baseDecay * 0.05; 
+
+        } 
+        else if (style === 'Rainbow Sparkle') {
+            // 1. Generate Hue if needed
+            if (meta.hue === undefined) meta.hue = Math.random();
+            
+            // 2. Convert to RGB
+            const spark = hsvToRgb(meta.hue, 1.0, 1.0);
+            fxR = spark.r; fxG = spark.g; fxB = spark.b;
+        } 
+        else {
+            // Standard 'Bounce' or 'Flash'
             const rgb = hexToRgb(hexColor);
-            fxR = rgb.r; 
-            fxG = rgb.g; 
-            fxB = rgb.b;
+            fxR = rgb.r; fxG = rgb.g; fxB = rgb.b;
 
             if (style === 'Flash') {
-                // Flash decays 3x faster for a strobe effect
-                decayRate = baseDecay * 3.0;
+                decayRate = baseDecay * 3.0; // Fast decay
             }
         }
 
-        // --- APPLY BLENDING ---
-        // Additive Blending: Base Color + (Effect Color * Intensity)
+        // --- BLENDING ---
+        // Additive blending: Base Color + (Effect * Intensity)
         r = Math.min(255, r + (fxR * intensity));
         g = Math.min(255, g + (fxG * intensity));
         b = Math.min(255, b + (fxB * intensity));
@@ -522,11 +663,14 @@ function render(state, pos, tick, currentColor, utils) {
         if (intensity <= 0) {
             activeFades.delete(keyId);
         } else {
-            // If we are in Rainbow mode, we MUST store the object to keep the hue consistent
+            // Save back to state
             if (style === 'Rainbow Sparkle') {
                 activeFades.set(keyId, { intensity, hue: meta.hue });
+            } else if (style === 'Heatmap') {
+                // Heatmap also uses object storage in case we want to add metadata later
+                activeFades.set(keyId, { intensity });
             } else {
-                // For others, we can just store the number (optimization)
+                // Optimization for simple modes
                 activeFades.set(keyId, intensity);
             }
         }
@@ -1009,9 +1153,44 @@ registerAction(({
                     }
                 }
             },
+            // --- UPDATED FLASH LOGIC ---
             flashKey: (keyName) => {
                 const id = NAME_TO_ID.get(keyName.toUpperCase());
-                if (id) state.__fxRuntime.activeFades.set(id, 1.0);
+                if (!id) return; // Key not found
+
+                const fades = state.__fxRuntime.activeFades;
+                const config = state.widgets?.typingFx || {};
+                const style = config.effectStyle || 'Bounce';
+
+                // 1. Heatmap: Accumulate Intensity
+                if (style === 'Heatmap') {
+                    let currentVal = 0;
+                    const entry = fades.get(id);
+                    
+                    // Handle legacy storage (number vs object)
+                    if (typeof entry === 'number') currentVal = entry;
+                    else if (entry && typeof entry === 'object') currentVal = entry.intensity || 0;
+
+                    // Add Heat based on slider (Default to 0.2 if undefined)
+                    // Slider 0.1 = Slow Heat (10 taps)
+                    // Slider 1.0 = Instant Heat (1 tap)
+                    const increment = (config.intensity !== undefined) ? config.intensity : 0.2;
+
+                    let nextVal = currentVal + increment;
+                    if (nextVal > 1.0) nextVal = 1.0; // Cap at max
+
+                    fades.set(id, nextVal);
+                } 
+                // 2. Rainbow: Trigger Random Color
+                else if (style === 'Rainbow Sparkle') {
+                    // We set hue to undefined. The renderer (Layer 5) will see this
+                    // and generate a random hue on the next frame.
+                    fades.set(id, { intensity: 1.0, hue: undefined });
+                } 
+                // 3. Bounce / Flash: Reset to Max
+                else {
+                    fades.set(id, 1.0);
+                }
             }
         };
     }

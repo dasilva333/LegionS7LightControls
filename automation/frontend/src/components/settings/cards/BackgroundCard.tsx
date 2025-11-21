@@ -26,7 +26,7 @@ type BackgroundCardProps = {
 };
 
 type Mode = "none" | "effect"; // Removed 'time'
-type EffectType = "Solid" | "Ripple" | "Wave" | "Fade" | "Checkerboard" | "Sonar" | "Raindrops" | "Heatmap";
+type EffectType = "Solid" | "Ripple" | "Wave" | "Fade" | "Checkerboard" | "Sonar" | "Raindrops" | "Pulse";
 type ColorSource = "Static" | "Time of Day" | "Spectrum";
 
 type GradientResponse = {
@@ -72,7 +72,7 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGradient, setEditingGradient] = useState<GradientData | null>(null);
 
-  const effectTypes: EffectType[] = ["Solid", "Ripple", "Wave", "Fade", "Checkerboard", "Sonar", "Raindrops", "Heatmap"];
+  const effectTypes: EffectType[] = ["Solid", "Ripple", "Wave", "Fade", "Checkerboard", "Sonar", "Raindrops", "Pulse"];
   const colorSources: ColorSource[] = ["Static", "Time of Day", "Spectrum"];
 
   const controlsDisabled = disabled || isLoadingState;
@@ -363,13 +363,13 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
       {/* Speed Slider (Hidden for Solid Static, but shown for Solid+Spectrum or Wave) */}
       {(effectType !== 'Solid' || colorSource === 'Spectrum') && (
         <IonItem>
-          <IonLabel>Speed</IonLabel>
+          <IonLabel>Speed ({effectSpeed}x)</IonLabel>
           <IonRange
             pin
             value={effectSpeed}
             min={1}
-            max={5}
-            step={1}
+            max={5} 
+            step={0.25}
             onIonChange={(e) => handleEffectSpeedChange(Number(e.detail.value))}
             disabled={controlsDisabled}
           >

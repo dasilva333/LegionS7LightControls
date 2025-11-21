@@ -51,6 +51,7 @@ function render(state, pos, tick, currentColor, utils) {
     const rawColorSource = settings.colorSource || (state.backgroundMode === 'TIME' ? 'TIME OF DAY' : 'STATIC');
     const colorSource = rawColorSource.toUpperCase();
 
+    // Ranges between 1 and 5
     const speed = settings.speed || 3;
 
     // --- STEP A: DETERMINE BASE COLOR ---
@@ -111,18 +112,62 @@ function render(state, pos, tick, currentColor, utils) {
     if (effectType === 'SOLID') {
         dim = 1.0;
     }
-    else if (effectType === 'WAVE' || effectType === 'RIPPLE') {
-        const wave = Math.sin((pos.col * 0.2) + (tick * 0.05 * speed));
-        dim = (wave + 1) / 2;
+    else if (effectType === 'WAVE') {
+        // Linear Left-to-Right Scan
+        // (pos.col * 0.25) defines the width of the wave (approx 1 full wave across keyboard)
+        // (tick * 0.1 * speed) moves the wave. Subtracting time makes it flow Right.
+        const val = Math.sin((pos.col * 0.25) - (tick * 0.1 * speed));
+
+        // Normalize sine (-1 to 1) to brightness (0 to 1)
+        dim = (val + 1) / 2;
+    }
+    else if (effectType === 'RIPPLE') {
+        // Circular/Radial Expansion
+        // Hardcoded center approx (Col 11, Row 3.5) fits most TKL/Full keyboards
+        const cx = 11;
+        const cy = 4;
+        const dx = pos.col - cx;
+        const dy = pos.row - cy;
+
+        // Pythagorean distance from center
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // (dist * 0.4) controls ring tightness
+        // Subtracting time makes the rings expand OUTWARD
+        const val = Math.sin((dist * 0.4) - (tick * 0.1 * speed));
+
+        dim = (val + 1) / 2;
     }
     else if (effectType === 'FADE' || effectType === 'BREATHING') {
         const pulse = Math.sin(tick * 0.02 * speed);
         dim = (pulse + 1) / 2;
     }
     else if (effectType === 'CHECKERBOARD' || effectType === 'CHECKER') {
-        const isEven = (pos.row + pos.col) % 2 === 0;
-        const invert = Math.floor(tick / (60 / speed)) % 2 === 1;
-        dim = ((isEven && !invert) || (!isEven && invert)) ? 1.0 : 0.0;
+        // 1. Define the checker pattern: 1 vs -1
+        // This determines which "Group" the key belongs to (Black vs White)
+        const patternSign = ((pos.row + pos.col) % 2 === 0) ? 1 : -1;
+
+        // 2. Determine "Sharpness" based on speed (Range 1-5)
+        // Speed 1 = Soft Sine Wave (Gain ~1.5)
+        // Speed 5 = Hard Square Wave (Gain ~55)
+        // We use Math.pow to make the high speeds get aggressive quickly
+        const sharpness = 0.5 + Math.pow(speed, 2.5);
+
+        // 3. Oscillate
+        // Standard Sine wave driven by time
+        const rawWave = Math.sin(tick * 0.05 * speed);
+
+        // 4. Apply Sharpness & Clamp
+        // Multiplying the sine wave makes the slope vertical (instant snap).
+        // Clamping limits it so it doesn't exceed valid brightness ranges.
+        let wave = rawWave * sharpness;
+        wave = Math.max(-1, Math.min(1, wave));
+
+        // 5. Combine
+        // If wave is +1 and pattern is +1, result is 1 (Bright)
+        // If wave is -1 and pattern is +1, result is -1 (Dark)
+        // Normalizing ((-1 to 1) + 1) / 2  ->  0.0 to 1.0
+        dim = ((wave * patternSign) + 1) / 2;
     }
     else if (effectType === 'SONAR') {
         const dx = pos.col - 10;
@@ -134,13 +179,33 @@ function render(state, pos, tick, currentColor, utils) {
         dim = (diff < 0.5) ? (1.0 - (diff * 2)) : 0.0;
     }
     else if (effectType === 'RAINDROPS') {
-        const seed = Math.floor(tick / (20 / speed)) * 1000 + pos.keyId;
-        const rand = Math.sin(seed) * 10000;
-        const isDrop = (rand - Math.floor(rand)) > 0.98;
-        const subTick = tick % (20 / speed);
-        dim = isDrop ? 1.0 : Math.max(0, 1.0 - (subTick * 0.1));
+        // 1. Create a pseudo-random offset per column so they don't fall in sync.
+        // We use Math.sin on the column index to get a deterministic "random" number.
+        const colOffset = Math.sin(pos.col * 9999) * 100;
+
+        // 2. Calculate "Time" vertically. 
+        // (tick * speed) moves the drop down. Subtracting pos.row makes it relate to physical space.
+        const verticalFlow = (tick * 0.2 * speed) + colOffset - pos.row;
+
+        // 3. Wrap the space to create repeating drops.
+        // 'spacing' is the vertical distance between drops in the same column.
+        const spacing = 20;
+        // Modulo math to create the loop. The extra logic ensures positive results.
+        const posInCycle = ((verticalFlow % spacing) + spacing) % spacing;
+
+        // 4. Draw the Drop
+        const tailLength = 8; // How long the trail is
+
+        if (posInCycle < tailLength) {
+            // 0 is the head (brightest), tailLength is the end (darkest)
+            const brightness = 1.0 - (posInCycle / tailLength);
+            // Square it (brightness^2) for a nicer "liquid" fade
+            dim = brightness * brightness;
+        } else {
+            dim = 0.0;
+        }
     }
-    else if (effectType === 'HEATMAP') {
+    else if (effectType === 'PULSE') {
         const dx = pos.col - 10;
         const dy = pos.row - 3;
         const dist = Math.sqrt(dx * dx + dy * dy);

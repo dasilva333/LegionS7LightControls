@@ -155,9 +155,44 @@
                     }
                 }
             },
+            // --- UPDATED FLASH LOGIC ---
             flashKey: (keyName) => {
                 const id = NAME_TO_ID.get(keyName.toUpperCase());
-                if (id) state.__fxRuntime.activeFades.set(id, 1.0);
+                if (!id) return; // Key not found
+
+                const fades = state.__fxRuntime.activeFades;
+                const config = state.widgets?.typingFx || {};
+                const style = config.effectStyle || 'Bounce';
+
+                // 1. Heatmap: Accumulate Intensity
+                if (style === 'Heatmap') {
+                    let currentVal = 0;
+                    const entry = fades.get(id);
+                    
+                    // Handle legacy storage (number vs object)
+                    if (typeof entry === 'number') currentVal = entry;
+                    else if (entry && typeof entry === 'object') currentVal = entry.intensity || 0;
+
+                    // Add Heat based on slider (Default to 0.2 if undefined)
+                    // Slider 0.1 = Slow Heat (10 taps)
+                    // Slider 1.0 = Instant Heat (1 tap)
+                    const increment = (config.intensity !== undefined) ? config.intensity : 0.2;
+
+                    let nextVal = currentVal + increment;
+                    if (nextVal > 1.0) nextVal = 1.0; // Cap at max
+
+                    fades.set(id, nextVal);
+                } 
+                // 2. Rainbow: Trigger Random Color
+                else if (style === 'Rainbow Sparkle') {
+                    // We set hue to undefined. The renderer (Layer 5) will see this
+                    // and generate a random hue on the next frame.
+                    fades.set(id, { intensity: 1.0, hue: undefined });
+                } 
+                // 3. Bounce / Flash: Reset to Max
+                else {
+                    fades.set(id, 1.0);
+                }
             }
         };
     }

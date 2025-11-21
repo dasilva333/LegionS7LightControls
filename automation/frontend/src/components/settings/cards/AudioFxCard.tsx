@@ -10,7 +10,7 @@ type AudioFxCardProps = {
 
 type AudioConfig = {
   enabled?: boolean;
-  mode?: 'Ripple' | 'Rows (EQ)' | 'Rows (Loudness)';
+  mode?: 'Ripple' | 'Rows (EQ)' | 'Rows (Loudness)' | 'Rows (Hybrid)';
   source?: 'Windows Audio' | 'Microphone' | 'Both';
   sensitivity?: number;
   decay?: number;
@@ -116,6 +116,7 @@ const AudioFxCard: React.FC<AudioFxCardProps> = ({ disabled }) => {
           <IonSelectOption value="Ripple">Ripple</IonSelectOption>
           <IonSelectOption value="Rows (EQ)">Rows (EQ)</IonSelectOption>
           <IonSelectOption value="Rows (Loudness)">Rows (Loudness)</IonSelectOption>
+          <IonSelectOption value="Rows (Hybrid)">Rows (Hybrid)</IonSelectOption>
         </IonSelect>
       </IonItem>
       <IonItem lines="none" className="audio-card__item">

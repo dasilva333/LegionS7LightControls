@@ -16,7 +16,7 @@ const MAX_DB = -10;
 let ai = null;
 let isActive = false;
 let currentSourceType = null;
-let currentMode = null; // 'Rows (Loudness)' or 'Rows (EQ)'
+let currentMode = null; // 'Rows (Loudness)', 'Rows (EQ)', 'Rows (Hybrid)'
 let processingInterval = null;
 
 // Config
@@ -131,9 +131,19 @@ function startAudio(sourceType) {
         processingInterval = setInterval(() => {
             if (!isActive) return;
 
-            if (currentMode === 'Rows (EQ)') {
+            // --- HYBRID MODE UPDATE ---
+            if (currentMode === 'Rows (Hybrid)') {
+                // Calculate BOTH:
+                // 1. RMS for the F-Keys
+                // 2. FFT for the rest
+                processLoudness();
                 processEQ();
-            } else {
+            } 
+            else if (currentMode === 'Rows (EQ)') {
+                processEQ();
+            } 
+            else {
+                // Default: Loudness
                 processLoudness();
             }
 
@@ -145,9 +155,8 @@ function startAudio(sourceType) {
 }
 
 // --- LOGIC: RMS LOUDNESS ---
+// --- LOGIC: RMS LOUDNESS ---
 function processLoudness() {
-    // We use the rawBuffer to calculate RMS of the *latest* chunk
-    // To keep it responsive, we just look at the last ~500 samples
     const sampleCount = 512;
     if (rawBuffer.length < sampleCount) return;
 
@@ -159,8 +168,18 @@ function processLoudness() {
     }
     const rms = Math.sqrt(sum / slice.length);
 
-    // Apply Sensitivity
-    let val = rms * currentSensitivity;
+    // --- FIX: Use Logarithmic (dB) Scaling ---
+    // Previously: Linear (rms * sensitivity). This was too quiet compared to EQ.
+    // Now: We match the EQ's math exactly.
+    
+    const gainDB = currentSensitivity * 4; 
+    const db = toDecibels(rms) + gainDB;
+    
+    // Normalize -80dB to -10dB range -> 0.0 to 1.0
+    let val = (db - MIN_DB) / (MAX_DB - MIN_DB);
+
+    // Clamp
+    if (val < 0) val = 0;
     if (val > 1.0) val = 1.0;
 
     // Smooth Peak (Attack/Decay)
