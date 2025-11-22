@@ -96,6 +96,20 @@ function render(state, pos, tick, currentColor, utils) {
             base = { r: Math.floor(t * 200), g: Math.floor(t * 50), b: Math.floor(t * 100) };
         }
     }
+    else if (colorSource === 'CUSTOM') {
+        // O(1) Lookup from the optimized map
+        const map = settings.customMap || {};
+        const entry = map[keyId];
+        
+        if (entry) {
+            // Use the pixel data from the snapshot
+            base = { r: entry.r, g: entry.g, b: entry.b };
+        } else {
+            // Key not found in snapshot? Default to Black or Base Color.
+            // Using Black ensures the "Shape" of the snapshot is preserved.
+            base = { r: 0, g: 0, b: 0 };
+        }
+    }
     else if (colorSource === 'SPECTRUM') {
         // Rainbow Cycle
         const hue = (tick * 0.005 * (speed / 3)) % 1.0;

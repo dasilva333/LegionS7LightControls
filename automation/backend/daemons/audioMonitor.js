@@ -155,7 +155,6 @@ function startAudio(sourceType) {
 }
 
 // --- LOGIC: RMS LOUDNESS ---
-// --- LOGIC: RMS LOUDNESS ---
 function processLoudness() {
     const sampleCount = 512;
     if (rawBuffer.length < sampleCount) return;

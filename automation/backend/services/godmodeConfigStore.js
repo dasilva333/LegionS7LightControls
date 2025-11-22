@@ -16,7 +16,8 @@ const DEFAULT_GODMODE_STATE = {
   effectSettings: {
     effectType: 'Ripple',
     baseColor: '#0070FF',
-    speed: 3
+    speed: 3,
+    customMap: [] // NEW: Placeholder for custom JSON map
   },
   stormOverride: false,
   weatherEnabled: true,

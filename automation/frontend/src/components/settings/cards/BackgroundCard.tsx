@@ -26,8 +26,16 @@ type BackgroundCardProps = {
 };
 
 type Mode = "none" | "effect"; // Removed 'time'
-type EffectType = "Solid" | "Ripple" | "Wave" | "Fade" | "Checkerboard" | "Sonar" | "Raindrops" | "Pulse";
-type ColorSource = "Static" | "Time of Day" | "Spectrum";
+type EffectType =
+  | "Solid"
+  | "Ripple"
+  | "Wave"
+  | "Fade"
+  | "Checkerboard"
+  | "Sonar"
+  | "Raindrops"
+  | "Pulse";
+type ColorSource = "Static" | "Time of Day" | "Spectrum" | "Custom";
 
 type GradientResponse = {
   id: number;
@@ -50,6 +58,7 @@ type GodModeStateResponse = {
     colorSource?: string; // New Field
     baseColor?: string;
     speed?: number;
+    customMap?: Record<string, any>;
   };
 };
 
@@ -62,6 +71,10 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
   const [colorSource, setColorSource] = useState<ColorSource>("Static");
   const [effectSpeed, setEffectSpeed] = useState(3);
   const [baseColor, setBaseColor] = useState("#0070FF");
+  const [customMapLoaded, setCustomMapLoaded] = useState(false);
+  const [customMap, setCustomMap] = useState<Record<string, any> | undefined>(
+    undefined
+  );
 
   // Time Gradient Data
   const [gradients, setGradients] = useState<GradientResponse[]>([]);
@@ -70,10 +83,26 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingGradient, setEditingGradient] = useState<GradientData | null>(null);
+  const [editingGradient, setEditingGradient] = useState<GradientData | null>(
+    null
+  );
 
-  const effectTypes: EffectType[] = ["Solid", "Ripple", "Wave", "Fade", "Checkerboard", "Sonar", "Raindrops", "Pulse"];
-  const colorSources: ColorSource[] = ["Static", "Time of Day", "Spectrum"];
+  const effectTypes: EffectType[] = [
+    "Solid",
+    "Ripple",
+    "Wave",
+    "Fade",
+    "Checkerboard",
+    "Sonar",
+    "Raindrops",
+    "Pulse",
+  ];
+  const colorSources: ColorSource[] = [
+    "Static",
+    "Time of Day",
+    "Spectrum",
+    "Custom",
+  ];
 
   const controlsDisabled = disabled || isLoadingState;
 
@@ -87,22 +116,25 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
 
   const fetchState = async () => {
     try {
-      const data = await apiClient.get<GodModeStateResponse>("/api/godmode/state");
+      const data = await apiClient.get<GodModeStateResponse>(
+        "/api/godmode/state"
+      );
 
       // Migrate old 'time' mode to 'effect' mode with source 'Time of Day'
       let bgMode = data.backgroundMode;
-      if (bgMode as any === 'time') bgMode = 'effect';
+      if ((bgMode as any) === "time") bgMode = "effect";
       if (bgMode) setMode(bgMode);
-      if (typeof data.timeOfDay === 'number') setTimeOfDay(data.timeOfDay);
+      if (typeof data.timeOfDay === "number") setTimeOfDay(data.timeOfDay);
 
       const fx = data.effectSettings || {};
       if (fx.effectType) setEffectType(fx.effectType as EffectType);
       if (fx.colorSource) setColorSource(fx.colorSource as ColorSource);
+      if (fx.customMap) setCustomMap(fx.customMap); // <--- Add this
 
       // If migrating from old Time Mode, force settings
-      if (data.backgroundMode as any === 'time') {
-        setEffectType('Solid');
-        setColorSource('Time of Day');
+      if ((data.backgroundMode as any) === "time") {
+        setEffectType("Solid");
+        setColorSource("Time of Day");
       }
 
       if (typeof fx.speed === "number") setEffectSpeed(fx.speed);
@@ -136,20 +168,78 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
       effectType,
       colorSource,
       baseColor,
-      speed: effectSpeed
+      speed: effectSpeed,
+      customMap, // <--- CRITICAL: Include the map in future updates
     };
 
     // If partial contains effectSettings, merge it
-    const mergedSettings = { ...currentEffectSettings, ...(partial.effectSettings as object) };
+    const mergedSettings = {
+      ...currentEffectSettings,
+      ...(partial.effectSettings as object),
+    };
 
     try {
       await apiClient.post("/api/godmode/state", {
         ...partial,
-        effectSettings: mergedSettings
+        effectSettings: mergedSettings,
       });
     } catch (error) {
       console.error("[BackgroundCard] Failed to update state", error);
     }
+  };
+
+  const handleCustomMapUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string);
+        if (!Array.isArray(json))
+          throw new Error("Invalid format: Expected array");
+
+        // --- OPTIMIZATION: Transform Array to O(1) Lookup Object ---
+        // Input: [ { keyId: 1, r: 255... }, { keyId: 2... } ]
+        // Output: { "1": { r: 255... }, "2": { ... } }
+        const optimizedMap: Record<
+          string,
+          { r: number; g: number; b: number }
+        > = {};
+
+        json.forEach((item: any) => {
+          if (item.keyId) {
+            optimizedMap[item.keyId] = { r: item.r, g: item.g, b: item.b };
+          }
+        });
+
+        setCustomMap(optimizedMap);
+
+        // Send optimized map to backend
+        await persistState({
+          effectSettings: {
+            effectType,
+            colorSource: "Custom",
+            baseColor, // Keep existing base color as fallback/metadata
+            speed: effectSpeed,
+            customMap: optimizedMap,
+          },
+        });
+
+        setCustomMapLoaded(true);
+        // Optional: Clear the file input value so same file can be selected again
+        event.target.value = "";
+      } catch (error) {
+        console.error("Failed to parse/upload custom map", error);
+        // You might want to use an IonToast here in the future
+        alert(
+          "Failed to upload map. Ensure it is a valid snapshot JSON array."
+        );
+      }
+    };
+    reader.readAsText(file);
   };
 
   const handleModeChange = (newMode: Mode) => {
@@ -189,7 +279,7 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
       startTime: gradient.startTime || "09:00",
       endTime: gradient.endTime || "17:00",
       startRgb: gradient.startRgb || "#000000",
-      endRgb: gradient.endRgb || "#000000"
+      endRgb: gradient.endRgb || "#000000",
     });
     setIsModalOpen(true);
   };
@@ -203,18 +293,21 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
         start_time: data.startTime,
         end_time: data.endTime,
         start_rgb: data.startRgb,
-        end_rgb: data.endRgb
+        end_rgb: data.endRgb,
       };
 
       if (data.id) {
         // Update existing
         await apiClient.put(`/time-gradients/${data.id}`, payload);
-        updatedGradients = updatedGradients.map(g =>
+        updatedGradients = updatedGradients.map((g) =>
           g.id === data.id ? { ...g, ...data } : g
         );
       } else {
         // Create new
-        const newGradient = await apiClient.post<GradientResponse>("/time-gradients", payload);
+        const newGradient = await apiClient.post<GradientResponse>(
+          "/time-gradients",
+          payload
+        );
         updatedGradients.push(normalizeGradient(newGradient));
       }
 
@@ -245,7 +338,7 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
     if (!gradient.startTime || !gradient.endTime) return false;
 
     const parseTime = (t: string) => {
-      const [h, m] = t.split(':').map(Number);
+      const [h, m] = t.split(":").map(Number);
       return (h * 60 + m) / (24 * 60);
     };
 
@@ -262,7 +355,7 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
   };
 
   const renderGradientsList = () => (
-    <IonList inset style={{ marginTop: '16px' }}>
+    <IonList inset style={{ marginTop: "16px" }}>
       <IonListHeader>
         <IonLabel>Time of Day Schedule</IonLabel>
       </IonListHeader>
@@ -276,20 +369,45 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
       {!isLoadingGradients &&
         gradients.map((gradient) => {
           const isActive = isGradientActive(gradient);
-          const activeBorderStyle = isActive ? {
-            border: '2px solid var(--ion-color-primary)',
-            borderRadius: '8px',
-            backgroundColor: 'rgba(var(--ion-color-primary-rgb), 0.05)'
-          } : {};
+          const activeBorderStyle = isActive
+            ? {
+                border: "2px solid var(--ion-color-primary)",
+                borderRadius: "8px",
+                backgroundColor: "rgba(var(--ion-color-primary-rgb), 0.05)",
+              }
+            : {};
 
           return (
-            <IonItem key={gradient.id} className="gradient-item" style={activeBorderStyle}>
-              <div style={{ minWidth: "90px", display: "flex", flexDirection: "column", gap: "4px" }}>
-                <IonText color={isActive ? "primary" : "dark"} style={{ fontWeight: isActive ? 700 : 600, fontSize: "0.9rem" }}>
-                  {formatTime(gradient.startTime || '')}
+            <IonItem
+              key={gradient.id}
+              className="gradient-item"
+              style={activeBorderStyle}
+            >
+              <div
+                style={{
+                  minWidth: "90px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                }}
+              >
+                <IonText
+                  color={isActive ? "primary" : "dark"}
+                  style={{
+                    fontWeight: isActive ? 700 : 600,
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  {formatTime(gradient.startTime || "")}
                 </IonText>
-                <IonText color={isActive ? "primary" : "medium"} style={{ fontSize: "0.8rem", fontWeight: isActive ? 600 : 400 }}>
-                  to {formatTime(gradient.endTime || '')}
+                <IonText
+                  color={isActive ? "primary" : "medium"}
+                  style={{
+                    fontSize: "0.8rem",
+                    fontWeight: isActive ? 600 : 400,
+                  }}
+                >
+                  to {formatTime(gradient.endTime || "")}
                 </IonText>
               </div>
 
@@ -300,19 +418,41 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
                   margin: "0 16px",
                   borderRadius: "6px",
                   background: `linear-gradient(to right, ${gradient.startRgb}, ${gradient.endRgb})`,
-                  boxShadow: isActive ? "0 0 8px var(--ion-color-primary)" : "inset 0 0 0 1px rgba(255,255,255,0.15)",
-                  border: isActive ? "2px solid var(--ion-color-primary)" : "none"
+                  boxShadow: isActive
+                    ? "0 0 8px var(--ion-color-primary)"
+                    : "inset 0 0 0 1px rgba(255,255,255,0.15)",
+                  border: isActive
+                    ? "2px solid var(--ion-color-primary)"
+                    : "none",
                 }}
               />
 
-              <IonButton size="small" fill="clear" disabled={controlsDisabled} onClick={() => handleEditGradient(gradient)}>Edit</IonButton>
-              <IonButton size="small" fill="clear" color="danger" disabled={controlsDisabled}>
+              <IonButton
+                size="small"
+                fill="clear"
+                disabled={controlsDisabled}
+                onClick={() => handleEditGradient(gradient)}
+              >
+                Edit
+              </IonButton>
+              <IonButton
+                size="small"
+                fill="clear"
+                color="danger"
+                disabled={controlsDisabled}
+              >
                 <IonIcon icon={trashOutline} slot="icon-only" />
               </IonButton>
             </IonItem>
-          )
+          );
         })}
-      <IonButton expand="block" fill="outline" className="ion-margin-top" disabled={controlsDisabled} onClick={handleAddGradient}>
+      <IonButton
+        expand="block"
+        fill="outline"
+        className="ion-margin-top"
+        disabled={controlsDisabled}
+        onClick={handleAddGradient}
+      >
         + Add New Gradient
       </IonButton>
     </IonList>
@@ -329,7 +469,9 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
           disabled={controlsDisabled}
         >
           {effectTypes.map((type) => (
-            <IonSelectOption key={type} value={type}>{type}</IonSelectOption>
+            <IonSelectOption key={type} value={type}>
+              {type}
+            </IonSelectOption>
           ))}
         </IonSelect>
       </IonItem>
@@ -343,7 +485,9 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
           disabled={controlsDisabled}
         >
           {colorSources.map((src) => (
-            <IonSelectOption key={src} value={src}>{src}</IonSelectOption>
+            <IonSelectOption key={src} value={src}>
+              {src}
+            </IonSelectOption>
           ))}
         </IonSelect>
       </IonItem>
@@ -360,15 +504,41 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
         </IonItem>
       )}
 
+      {/* Custom JSON Upload */}
+      {colorSource === "Custom" && (
+        <IonItem>
+          <IonLabel position="stacked">Upload Key Map (JSON)</IonLabel>
+          <div style={{ padding: "10px 0" }}>
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleCustomMapUpload}
+              style={{ width: "100%" }}
+            />
+            {customMapLoaded && (
+              <IonNote
+                color="success"
+                style={{ display: "block", marginTop: "5px" }}
+              >
+                ✓ Custom map loaded
+              </IonNote>
+            )}
+            <IonNote style={{ fontSize: "0.8em" }}>
+              Upload a snapshot.json file generated by the sniffer tool.
+            </IonNote>
+          </div>
+        </IonItem>
+      )}
+
       {/* Speed Slider (Hidden for Solid Static, but shown for Solid+Spectrum or Wave) */}
-      {(effectType !== 'Solid' || colorSource === 'Spectrum') && (
+      {(effectType !== "Solid" || colorSource === "Spectrum") && (
         <IonItem>
           <IonLabel>Speed ({effectSpeed}x)</IonLabel>
           <IonRange
             pin
             value={effectSpeed}
             min={1}
-            max={5} 
+            max={5}
             step={0.25}
             onIonChange={(e) => handleEffectSpeedChange(Number(e.detail.value))}
             disabled={controlsDisabled}
@@ -399,7 +569,8 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
           <IonLabel>None</IonLabel>
         </IonSegmentButton>
         <IonSegmentButton value="effect">
-          <IonLabel>Active</IonLabel> {/* Renamed from Effect to Active since it encompasses all */}
+          <IonLabel>Active</IonLabel>{" "}
+          {/* Renamed from Effect to Active since it encompasses all */}
         </IonSegmentButton>
       </IonSegment>
 
