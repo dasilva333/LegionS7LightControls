@@ -1078,10 +1078,11 @@ registerAction(({
         log('[GodMode] Engine v2 loaded. State synced.');
 
         // 6. Main Loop
+        let lastFrameState = []; // Cache for snapshot
+        let captureMode = false; // Performance optimization
+
         Interceptor.attach(targetAddr, {
             onEnter(args) {
-                if (!state.active || state.mode === 'PASSTHROUGH') return;
-
                 const bufferInfoPtr = args[2];
                 if (bufferInfoPtr.isNull()) return;
                 const dataPtr = bufferInfoPtr.readPointer();
@@ -1089,6 +1090,33 @@ registerAction(({
 
                 if (dataPtr.readU8() === 0x07 && dataPtr.add(1).readU8() === 0xA1) {
                     tick++;
+
+                    // --- SNAPSHOT CAPTURE (READ ONLY) ---
+                    // Only parse if requested to save CPU
+                    if (captureMode) {
+                        const currentFrame = [];
+                        let readCursor = dataPtr.add(HEADER_SIZE);
+                        const readLimit = dataPtr.add(BUFFER_SIZE - BYTES_PER_KEY);
+
+                        while (readCursor < readLimit) {
+                            const kId = readCursor.readU16();
+                            if (kId !== 0) {
+                                const r = readCursor.add(2).readU8();
+                                const g = readCursor.add(3).readU8();
+                                const b = readCursor.add(4).readU8();
+                                currentFrame.push({ keyId: kId, r, g, b });
+                            }
+                            readCursor = readCursor.add(BYTES_PER_KEY);
+                        }
+                        lastFrameState = currentFrame;
+                    }
+                    // ------------------------------------
+
+                    // If God Mode is NOT active, we are done (Pass-through)
+                    if (!state.active || state.mode === 'PASSTHROUGH') return;
+
+                    // --- GOD MODE RENDER (WRITE) ---
+                    // ... (Existing rendering logic) ...
 
                     // --- DEBUG: FIRST FRAME ---
                     if (!debuggedOnce) {
@@ -1121,13 +1149,6 @@ registerAction(({
                                     for (const layerFn of layerOrder) {
                                         try {
                                             const nextColor = layerFn(state, pos, tick, color, color_math);
-
-                                            // // --- DEBUG: TRACE KEY 66 ---
-                                            // if (!debuggedOnce && keyId === 66) {
-                                            //     log(`[DEBUG] Key 66 Layer Result: ${JSON.stringify(nextColor)}`);
-                                            // }
-                                            // ---------------------------
-
                                             if (nextColor) color = nextColor;
                                         } catch (e) {
                                             if (!debuggedOnce) log(`[DEBUG] Layer Error: ${e.message}`);
@@ -1158,6 +1179,8 @@ registerAction(({
         return {
             enable: () => { state.active = true; log('God Mode Enabled'); },
             disable: () => { state.active = false; log('God Mode Disabled'); },
+            getSnapshot: () => { return lastFrameState; },
+            setCaptureMode: (enabled) => { captureMode = enabled; log(`[GodMode] Capture Mode: ${enabled}`); }, // <--- NEW EXPORT
             updateState: (partialState) => {
                 for (const key in partialState) {
                     if (typeof state[key] === 'object' && !Array.isArray(state[key]) && partialState[key] !== null) {
@@ -1180,7 +1203,7 @@ registerAction(({
                 if (style === 'Heatmap') {
                     let currentVal = 0;
                     const entry = fades.get(id);
-                    
+
                     // Handle legacy storage (number vs object)
                     if (typeof entry === 'number') currentVal = entry;
                     else if (entry && typeof entry === 'object') currentVal = entry.intensity || 0;
@@ -1194,13 +1217,13 @@ registerAction(({
                     if (nextVal > 1.0) nextVal = 1.0; // Cap at max
 
                     fades.set(id, nextVal);
-                } 
+                }
                 // 2. Rainbow: Trigger Random Color
                 else if (style === 'Rainbow Sparkle') {
                     // We set hue to undefined. The renderer (Layer 5) will see this
                     // and generate a random hue on the next frame.
                     fades.set(id, { intensity: 1.0, hue: undefined });
-                } 
+                }
                 // 3. Bounce / Flash: Reset to Max
                 else {
                     fades.set(id, 1.0);

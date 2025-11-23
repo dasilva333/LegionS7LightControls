@@ -18,7 +18,7 @@ import {
 import LayerCard from "../../shared/LayerCard";
 import ColorPicker from "../../shared/ColorPicker";
 import { apiClient } from "../../../config/api";
-import { trashOutline } from "ionicons/icons";
+import { trashOutline, cameraOutline } from "ionicons/icons";
 import GradientModal, { GradientData } from "../modals/GradientModal";
 
 type BackgroundCardProps = {
@@ -371,10 +371,10 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
           const isActive = isGradientActive(gradient);
           const activeBorderStyle = isActive
             ? {
-                border: "2px solid var(--ion-color-primary)",
-                borderRadius: "8px",
-                backgroundColor: "rgba(var(--ion-color-primary-rgb), 0.05)",
-              }
+              border: "2px solid var(--ion-color-primary)",
+              borderRadius: "8px",
+              backgroundColor: "rgba(var(--ion-color-primary-rgb), 0.05)",
+            }
             : {};
 
           return (
@@ -507,13 +507,45 @@ const BackgroundCard: React.FC<BackgroundCardProps> = ({ disabled }) => {
       {/* Custom JSON Upload */}
       {colorSource === "Custom" && (
         <IonItem>
-          <IonLabel position="stacked">Upload Key Map (JSON)</IonLabel>
-          <div style={{ padding: "10px 0" }}>
+          <IonLabel position="stacked">Custom Key Map</IonLabel>
+          <div style={{ padding: "10px 0", width: "100%" }}>
+
+            {/* Snapshot Button */}
+            <IonButton
+              expand="block"
+              color="secondary"
+              onClick={async () => {
+                if (confirm("This will briefly disable God Mode to capture the current keyboard state. Continue?")) {
+                  try {
+                    // Simple loading indication could be added here
+                    await apiClient.post('/api/godmode/snapshot', {});
+                    // Refresh state to see the new map applied
+                    await fetchState();
+                    alert("Snapshot captured and applied!");
+                  } catch (e) {
+                    console.error(e);
+                    alert("Failed to capture snapshot.");
+                  }
+                }
+              }}
+              disabled={controlsDisabled}
+              style={{ marginBottom: '12px' }}
+            >
+              <IonIcon slot="start" icon={cameraOutline} />
+              Capture Snapshot (One-Click)
+            </IonButton>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ flex: 1, height: '1px', background: 'var(--ion-color-medium-shade)' }}></div>
+              <IonNote>OR UPLOAD JSON</IonNote>
+              <div style={{ flex: 1, height: '1px', background: 'var(--ion-color-medium-shade)' }}></div>
+            </div>
+
             <input
               type="file"
               accept=".json"
               onChange={handleCustomMapUpload}
-              style={{ width: "100%" }}
+              style={{ width: "100%", marginTop: '12px' }}
             />
             {customMapLoaded && (
               <IonNote
