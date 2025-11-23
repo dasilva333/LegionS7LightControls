@@ -13,8 +13,8 @@ import {
 import { play, refresh, cloudUploadOutline } from 'ionicons/icons';
 import io, { Socket } from 'socket.io-client';
 import { API_BASE_URL } from '../config/api';
-import KEY_GROUPS from '../fixtures/keyGroups.json'; // Import Fixture
-import './Snake.css';
+import KEY_GROUPS from '../fixtures/keyGroups.json';
+import './GameStyles.css';
 
 // Game Constants
 const ROWS = 6;
@@ -290,13 +290,10 @@ const Snake: React.FC = () => {
         const isBody = snake.some((s, i) => i !== 0 && s[0] === r && s[1] === c);
         const isFood = food[0] === r && food[1] === c;
 
-        // Optional: Add visual indicator for "Void" cells in UI?
-        // For now, keep grid simple.
-
-        if (isHead) return 'snake-cell snake-head';
-        if (isBody) return 'snake-cell snake-body';
-        if (isFood) return 'snake-cell snake-food';
-        return 'snake-cell';
+        if (isHead) return 'game-cell cell-green';
+        if (isBody) return 'game-cell cell-green-dim';
+        if (isFood) return 'game-cell cell-red pulse-animation';
+        return 'game-cell';
     };
 
     return (
@@ -314,12 +311,11 @@ const Snake: React.FC = () => {
                     </IonButtons>
                 </IonToolbar>
             </IonHeader>
-            <IonContent className="ion-padding snake-content">
+            <IonContent className="ion-padding game-page-content">
                 <div className="game-container">
                     <div className="game-grid" style={{
                         display: 'grid',
-                        gridTemplateColumns: `repeat(${COLS}, 1fr)`,
-                        gap: '2px'
+                        gridTemplateColumns: `repeat(${COLS}, 1fr)`
                     }}>
                         {Array.from({ length: ROWS }).map((_, r) => (
                             Array.from({ length: COLS }).map((_, c) => (
@@ -329,14 +325,14 @@ const Snake: React.FC = () => {
                     </div>
 
                     {!isPlaying && !gameOver && (
-                        <div className="game-over-overlay" onClick={() => setIsPlaying(true)} style={{ cursor: 'pointer' }}>
+                        <div className="game-overlay" onClick={() => setIsPlaying(true)} style={{ cursor: 'pointer' }}>
                             <h2>Click or Press Arrow Key to Start</h2>
                             <IonButton onClick={() => setIsPlaying(true)}>Start Game</IonButton>
                         </div>
                     )}
 
                     {gameOver && (
-                        <div className="game-over-overlay">
+                        <div className="game-overlay">
                             <h2>Game Over</h2>
                             <IonButton onClick={startGame}>Try Again</IonButton>
                         </div>

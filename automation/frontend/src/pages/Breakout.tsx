@@ -14,7 +14,7 @@ import { play, refresh, cloudUploadOutline } from 'ionicons/icons';
 import io, { Socket } from 'socket.io-client';
 import { API_BASE_URL } from '../config/api';
 import KEY_GROUPS from '../fixtures/keyGroups.json';
-import './Snake.css'; // Reuse Snake CSS for grid styling
+import './GameStyles.css';
 
 // Game Constants
 const ROWS = 6;
@@ -281,18 +281,18 @@ const Breakout: React.FC = () => {
     const getCellClass = (r: number, c: number) => {
         // Paddle
         if (r === INITIAL_PADDLE_ROW && c >= paddleCol && c < paddleCol + INITIAL_PADDLE_WIDTH) {
-            return 'snake-cell snake-head'; // Reusing Green color
+            return 'game-cell cell-green'; // Reusing Green color
         }
         // Ball
         if (r === ballPos[0] && c === ballPos[1]) {
-            return 'snake-cell snake-food'; // Reusing Red color
+            return 'game-cell cell-red'; // Reusing Red color
         }
         // Bricks
         const brick = bricks.find(b => b.r === r && b.c === c);
         if (brick && brick.active) {
-            return 'snake-cell snake-body'; // Reusing Blue color
+            return 'game-cell cell-blue'; // Reusing Blue color
         }
-        return 'snake-cell';
+        return 'game-cell';
     };
 
     return (
@@ -310,12 +310,11 @@ const Breakout: React.FC = () => {
                     </IonButtons>
                 </IonToolbar>
             </IonHeader>
-            <IonContent className="ion-padding snake-content">
+            <IonContent className="ion-padding game-page-content">
                 <div className="game-container">
                     <div className="game-grid" style={{
                         display: 'grid',
-                        gridTemplateColumns: `repeat(${COLS}, 1fr)`,
-                        gap: '2px'
+                        gridTemplateColumns: `repeat(${COLS}, 1fr)`
                     }}>
                         {Array.from({ length: ROWS }).map((_, r) => (
                             Array.from({ length: COLS }).map((_, c) => (
@@ -325,21 +324,21 @@ const Breakout: React.FC = () => {
                     </div>
 
                     {!isPlaying && !gameOver && !gameWon && (
-                        <div className="game-over-overlay" onClick={() => setIsPlaying(true)} style={{ cursor: 'pointer' }}>
+                        <div className="game-overlay" onClick={() => setIsPlaying(true)} style={{ cursor: 'pointer' }}>
                             <h2>Click or Press Arrow Key to Start</h2>
                             <IonButton onClick={() => setIsPlaying(true)}>Start Game</IonButton>
                         </div>
                     )}
 
                     {gameOver && (
-                        <div className="game-over-overlay">
+                        <div className="game-overlay">
                             <h2>Game Over</h2>
                             <IonButton onClick={startGame}>Try Again</IonButton>
                         </div>
                     )}
 
                     {gameWon && (
-                        <div className="game-over-overlay">
+                        <div className="game-overlay">
                             <h2>You Win!</h2>
                             <IonButton onClick={startGame}>Play Again</IonButton>
                         </div>
