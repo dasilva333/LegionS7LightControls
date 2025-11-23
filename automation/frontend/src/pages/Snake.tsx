@@ -19,7 +19,7 @@ import './Snake.css';
 // Game Constants
 const ROWS = 6;
 const COLS = 22;
-const SPEED = 200;
+const SPEED = 400;
 
 type Coordinate = [number, number];
 type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
@@ -69,18 +69,22 @@ const translateToBackend = (coords: Coordinate[]) => coords.map(getAnchor);
 const Snake: React.FC = () => {
     const [snake, setSnake] = useState<Coordinate[]>(INITIAL_SNAKE);
     const [food, setFood] = useState<Coordinate>(INITIAL_FOOD);
-    const [direction, setDirection] = useState<Direction>(INITIAL_DIRECTION);
+    // const [direction, setDirection] = useState<Direction>(INITIAL_DIRECTION); // Unused, using refs
     const [gameOver, setGameOver] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isSyncing, setIsSyncing] = useState(true);
 
     const socketRef = useRef<Socket | null>(null);
-    const directionRef = useRef<Direction>(INITIAL_DIRECTION);
+    const inputQueueRef = useRef<Direction[]>([]); // Queue of pending moves
+    const lastProcessedDirectionRef = useRef<Direction>(INITIAL_DIRECTION); // Track actual movement
     const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
 
     // Initialize Socket
     useEffect(() => {
-        const socket = io(API_BASE_URL);
+        const socket = io(API_BASE_URL, {
+            transports: ['websocket'], // Force WebSocket
+            upgrade: false
+        });
         socketRef.current = socket;
 
         socket.on('connect', () => {
@@ -106,19 +110,32 @@ const Snake: React.FC = () => {
 
             if (!isPlaying) return;
 
+            // Determine the "last known direction" to validate against.
+            // If queue has items, validate against the LAST item in queue.
+            // If queue is empty, validate against the LAST PROCESSED direction (current movement).
+            const lastKnownDirection = inputQueueRef.current.length > 0
+                ? inputQueueRef.current[inputQueueRef.current.length - 1]
+                : lastProcessedDirectionRef.current;
+
+            let nextDir: Direction | null = null;
+
             switch (e.key) {
                 case 'ArrowUp':
-                    if (directionRef.current !== 'DOWN') directionRef.current = 'UP';
+                    if (lastKnownDirection !== 'DOWN' && lastKnownDirection !== 'UP') nextDir = 'UP';
                     break;
                 case 'ArrowDown':
-                    if (directionRef.current !== 'UP') directionRef.current = 'DOWN';
+                    if (lastKnownDirection !== 'UP' && lastKnownDirection !== 'DOWN') nextDir = 'DOWN';
                     break;
                 case 'ArrowLeft':
-                    if (directionRef.current !== 'RIGHT') directionRef.current = 'LEFT';
+                    if (lastKnownDirection !== 'RIGHT' && lastKnownDirection !== 'LEFT') nextDir = 'LEFT';
                     break;
                 case 'ArrowRight':
-                    if (directionRef.current !== 'LEFT') directionRef.current = 'RIGHT';
+                    if (lastKnownDirection !== 'LEFT' && lastKnownDirection !== 'RIGHT') nextDir = 'RIGHT';
                     break;
+            }
+
+            if (nextDir) {
+                inputQueueRef.current.push(nextDir);
             }
         };
 
@@ -133,8 +150,15 @@ const Snake: React.FC = () => {
         setSnake(prevSnake => {
             const head = prevSnake[0];
             const newHead: Coordinate = [...head];
-            const currentDir = directionRef.current;
-            setDirection(currentDir);
+
+            // Consume from Input Queue, or keep going straight
+            let currentDir = lastProcessedDirectionRef.current;
+            if (inputQueueRef.current.length > 0) {
+                currentDir = inputQueueRef.current.shift() as Direction;
+            }
+
+            // Update the "Last Processed" ref so input handler knows what we did
+            lastProcessedDirectionRef.current = currentDir;
 
             switch (currentDir) {
                 case 'UP': newHead[0] -= 1; break;
@@ -224,19 +248,41 @@ const Snake: React.FC = () => {
     useIonViewWillLeave(() => {
         setIsPlaying(false);
         if (gameLoopRef.current) clearInterval(gameLoopRef.current);
+
+        // Send cleanup frame
+        if (socketRef.current) {
+            socketRef.current.emit('snake:frame', {
+                snake: snake,
+                food: food,
+                isPlaying: false, // IMPORTANT: Tell backend we stopped
+                gameOver: false
+            });
+        }
     });
 
     const startGame = () => {
         setSnake(INITIAL_SNAKE);
         setFood(INITIAL_FOOD); // Will be valid
-        setDirection(INITIAL_DIRECTION);
-        directionRef.current = INITIAL_DIRECTION;
+        // setDirection(INITIAL_DIRECTION);
+        inputQueueRef.current = []; // Clear queue
+        lastProcessedDirectionRef.current = INITIAL_DIRECTION;
         setGameOver(false);
         setIsPlaying(true);
     };
 
     const toggleSync = () => {
-        setIsSyncing(!isSyncing);
+        const newSync = !isSyncing;
+        setIsSyncing(newSync);
+
+        // If turning OFF, send one last frame to clear backend state
+        if (!newSync && socketRef.current) {
+            socketRef.current.emit('snake:frame', {
+                snake: snake,
+                food: food,
+                isPlaying: false,
+                gameOver: false
+            });
+        }
     };
 
     const getCellClass = (r: number, c: number) => {

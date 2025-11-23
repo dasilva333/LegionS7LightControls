@@ -67,18 +67,19 @@ app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
 const http = require('http');
 const { Server } = require("socket.io");
-const { initSnakeSocket } = require('./socket/snakeHandler');
+const { initGameSocket } = require('./socket/gameSocketHandler');
 
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"]
-  }
+  },
+  transports: ['websocket'] // Force WebSockets, disable polling
 });
 
-// Initialize Snake Socket Handler
-initSnakeSocket(io);
+// Initialize Game Socket Handler (Snake + Breakout)
+initGameSocket(io);
 
 const rawPort = process.env.PORT || process.argv[2] || 3005;
 const port = Number(rawPort) || 3005;

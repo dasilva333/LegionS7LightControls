@@ -132,6 +132,10 @@
                                     // Snake Game Override
                                     const snakeColor = godMode.layers.layer_snake(state, pos, tick, color, color_math);
                                     if (snakeColor) color = snakeColor;
+                                } else if (state.breakout && state.breakout.isPlaying) {
+                                    // Breakout Game Override
+                                    const breakoutColor = godMode.layers.layer_breakout(state, pos, tick, color, color_math);
+                                    if (breakoutColor) color = breakoutColor;
                                 } else {
                                     // Standard Pipeline
                                     for (const layerFn of layerOrder) {

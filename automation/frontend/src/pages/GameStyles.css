@@ -1,0 +1,136 @@
+/* Common Game Styles */
+:root {
+    --game-bg: #1e1e1e;
+    --grid-bg: #000;
+    --cell-bg: #111;
+    --cell-border-radius: 2px;
+
+    /* Brand Colors */
+    --color-player: #00ff00;
+    /* Bright Green */
+    --color-player-dim: #00aa00;
+    /* Darker Green */
+    --color-enemy: #ff0000;
+    /* Bright Red */
+    --color-item: #3880ff;
+    /* Blue (for bricks etc) */
+
+    --overlay-bg: rgba(0, 0, 0, 0.85);
+    --text-color: #ffffff;
+    --text-color-dim: #888888;
+}
+
+.game-page-content {
+    --background: var(--game-bg);
+}
+
+.game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 20px;
+    color: var(--text-color);
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 800px;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--text-color);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.game-grid {
+    width: 100%;
+    max-width: 800px;
+    background: var(--grid-bg);
+    border: 2px solid #333;
+    padding: 4px;
+    display: grid;
+    gap: 2px;
+    /* Aspect ratio is handled by the grid content usually, 
+       but we can enforce max-width to keep cells square-ish */
+}
+
+.game-cell {
+    width: 100%;
+    aspect-ratio: 1;
+    /* Force square cells */
+    background: var(--cell-bg);
+    border-radius: var(--cell-border-radius);
+    transition: background-color 0.1s;
+}
+
+/* Color Variants */
+.cell-green {
+    background-color: var(--color-player);
+    box-shadow: 0 0 10px var(--color-player);
+}
+
+.cell-green-dim {
+    background-color: var(--color-player-dim);
+}
+
+.cell-red {
+    background-color: var(--color-enemy);
+    box-shadow: 0 0 10px var(--color-enemy);
+}
+
+.cell-blue {
+    background-color: var(--color-item);
+    box-shadow: 0 0 10px var(--color-item);
+}
+
+/* Animations */
+.pulse-animation {
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.9);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        transform: scale(0.9);
+    }
+}
+
+/* Overlays */
+.game-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--overlay-bg);
+    padding: 2rem;
+    border-radius: 1rem;
+    text-align: center;
+    backdrop-filter: blur(5px);
+    border: 1px solid #444;
+    z-index: 100;
+    min-width: 300px;
+}
+
+.game-overlay h2 {
+    margin-top: 0;
+    color: var(--text-color);
+    margin-bottom: 1.5rem;
+}
+
+.controls-hint {
+    margin-top: 20px;
+    text-align: center;
+    color: var(--text-color-dim);
+    font-size: 0.9rem;
+}

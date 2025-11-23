@@ -1,0 +1,60 @@
+.pong-content {
+    --background: #1e1e1e;
+}
+
+.game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    position: relative;
+}
+
+.score-board {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 600px;
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--ion-color-light);
+}
+
+.pong-cell {
+    width: 100%;
+    padding-bottom: 100%;
+    /* Square aspect ratio */
+    background-color: #333;
+    border-radius: 4px;
+    transition: background-color 0.1s ease;
+}
+
+.pong-ball {
+    background-color: var(--ion-color-danger);
+    box-shadow: 0 0 10px var(--ion-color-danger);
+}
+
+.pong-paddle-user {
+    background-color: var(--ion-color-success);
+    box-shadow: 0 0 10px var(--ion-color-success);
+}
+
+.pong-paddle-cpu {
+    background-color: var(--ion-color-success);
+    box-shadow: 0 0 10px var(--ion-color-success);
+}
+
+.game-over-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    padding: 2rem;
+    border-radius: 1rem;
+    text-align: center;
+    backdrop-filter: blur(5px);
+    border: 1px solid var(--ion-color-primary);
+}

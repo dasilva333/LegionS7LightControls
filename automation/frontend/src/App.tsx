@@ -11,11 +11,14 @@ import {
   setupIonicReact
 } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
-import { homeOutline, settingsOutline, terminalOutline, gameControllerOutline } from 'ionicons/icons';
+import { homeOutline, settingsOutline, terminalOutline, gameControllerOutline, gridOutline } from 'ionicons/icons';
 import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
 import Logs from './pages/Logs';
 import Snake from './pages/Snake';
+import Breakout from './pages/Breakout';
+import Games from './pages/Games';
+import Pong from './pages/Pong';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -55,6 +58,15 @@ const App: React.FC = () => (
           <Route exact path="/snake">
             <Snake />
           </Route>
+          <Route exact path="/breakout">
+            <Breakout />
+          </Route>
+          <Route exact path="/pong">
+            <Pong />
+          </Route>
+          <Route exact path="/games">
+            <Games />
+          </Route>
           <Route exact path="/">
             <Redirect to="/dashboard" />
           </Route>
@@ -64,9 +76,9 @@ const App: React.FC = () => (
             <IonIcon aria-hidden="true" icon={homeOutline} />
             <IonLabel>Dashboard</IonLabel>
           </IonTabButton>
-          <IonTabButton tab="snake" href="/snake">
+          <IonTabButton tab="games" href="/games">
             <IonIcon aria-hidden="true" icon={gameControllerOutline} />
-            <IonLabel>Snake</IonLabel>
+            <IonLabel>Games</IonLabel>
           </IonTabButton>
           <IonTabButton tab="settings" href="/settings">
             <IonIcon aria-hidden="true" icon={settingsOutline} />
