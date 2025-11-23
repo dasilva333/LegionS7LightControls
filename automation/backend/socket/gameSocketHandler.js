@@ -17,6 +17,16 @@ let breakoutGameState = {
     lastUpdated: Date.now()
 };
 
+let pongGameState = {
+    ball: { x: 0, y: 0 },
+    paddleTop: 0,
+    paddleBottom: 0,
+    score: { user: 0, cpu: 0 },
+    gameOver: false,
+    isPlaying: false,
+    lastUpdated: Date.now()
+};
+
 function initGameSocket(io) {
     console.log('[GameHandler] Initializing Socket.io handler for Arcade Games...');
 
@@ -60,6 +70,18 @@ function initGameSocket(io) {
             };
             // Push to Frida
             sendCommand('updateState', { breakout: breakoutGameState });
+        });
+
+        // --- PONG EVENTS ---
+        socket.on('pong:frame', (data) => {
+            messageCount++;
+            pongGameState = {
+                ...pongGameState,
+                ...data,
+                lastUpdated: Date.now()
+            };
+            // Push to Frida
+            sendCommand('updateState', { pong: pongGameState });
         });
 
         socket.on('disconnect', () => {

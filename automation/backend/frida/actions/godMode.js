@@ -136,6 +136,10 @@
                                     // Breakout Game Override
                                     const breakoutColor = godMode.layers.layer_breakout(state, pos, tick, color, color_math);
                                     if (breakoutColor) color = breakoutColor;
+                                } else if (state.pong && state.pong.isPlaying) {
+                                    // Pong Game Override
+                                    const pongColor = godMode.layers.layer_pong(state, pos, tick, color, color_math);
+                                    if (pongColor) color = pongColor;
                                 } else {
                                     // Standard Pipeline
                                     for (const layerFn of layerOrder) {

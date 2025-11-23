@@ -11,24 +11,22 @@
     position: relative;
 }
 
+.pong-grid {
+    grid-template-columns: repeat(17, 1fr);
+    /* 17 Columns */
+    aspect-ratio: 17/6;
+    /* Maintain aspect ratio */
+}
+
 .score-board {
     display: flex;
     justify-content: space-between;
     width: 100%;
-    max-width: 600px;
+    max-width: 800px;
     margin-bottom: 20px;
     font-size: 1.5rem;
     font-weight: bold;
-    color: var(--ion-color-light);
-}
-
-.pong-cell {
-    width: 100%;
-    padding-bottom: 100%;
-    /* Square aspect ratio */
-    background-color: #333;
-    border-radius: 4px;
-    transition: background-color 0.1s ease;
+    color: var(--text-color);
 }
 
 .pong-ball {
@@ -51,10 +49,10 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.8);
+    background: var(--overlay-bg);
     padding: 2rem;
     border-radius: 1rem;
     text-align: center;
     backdrop-filter: blur(5px);
-    border: 1px solid var(--ion-color-primary);
+    border: 1px solid #444;
 }

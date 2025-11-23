@@ -18,10 +18,7 @@ import './Pong.css';
 // Game Constants
 const ROWS = 6;
 const COLS = 17; // Requested 17 columns
-const PADDLE_WIDTH = 3;
-const GAME_SPEED = 100; // ms per frame
-
-type Coordinate = [number, number];
+const GAME_SPEED = 400; // ms per frame
 
 const Pong: React.FC = () => {
     // State
@@ -37,13 +34,16 @@ const Pong: React.FC = () => {
     const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
 
     // Initialize Socket (Placeholder)
+    // Initialize Socket
     useEffect(() => {
-        // const socket = io(API_BASE_URL, {
-        //     transports: ['websocket'],
-        //     upgrade: false
-        // });
-        // socketRef.current = socket;
-        // return () => socket.disconnect();
+        const socket = io(API_BASE_URL, {
+            transports: ['websocket'],
+            upgrade: false
+        });
+        socketRef.current = socket;
+        return () => {
+            socket.disconnect();
+        };
     }, []);
 
     // Handle Input (User controls Top Paddle)
@@ -122,10 +122,36 @@ const Pong: React.FC = () => {
             return prev;
         });
 
-        // Sync Placeholder
-        // if (isSyncing && socketRef.current) { ... }
+        // 3. Check Game Over (First to 10)
+        if (score.user >= 10 || score.cpu >= 10) {
+            setGameOver(true);
+            setIsPlaying(false);
+            if (isSyncing && socketRef.current) {
+                socketRef.current.emit('pong:frame', {
+                    ball: { x: newX, y: newY },
+                    paddleTop,
+                    paddleBottom,
+                    score,
+                    isPlaying: false,
+                    gameOver: true
+                });
+            }
+            return;
+        }
 
-    }, [ball, gameOver, paddleTop, paddleBottom]);
+        // 4. Sync State
+        if (isSyncing && socketRef.current) {
+            socketRef.current.emit('pong:frame', {
+                ball: { x: newX, y: newY },
+                paddleTop,
+                paddleBottom,
+                score,
+                isPlaying: true,
+                gameOver: false
+            });
+        }
+
+    }, [ball, gameOver, paddleTop, paddleBottom, score, isSyncing]);
 
     const resetBall = () => {
         setBall({ x: Math.floor(COLS / 2), y: Math.floor(ROWS / 2), dx: Math.random() > 0.5 ? 1 : -1, dy: Math.random() > 0.5 ? 1 : -1 });
@@ -146,6 +172,16 @@ const Pong: React.FC = () => {
     useIonViewWillLeave(() => {
         setIsPlaying(false);
         if (gameLoopRef.current) clearInterval(gameLoopRef.current);
+        if (socketRef.current) {
+            socketRef.current.emit('pong:frame', {
+                ball,
+                paddleTop,
+                paddleBottom,
+                score,
+                isPlaying: false,
+                gameOver: false
+            });
+        }
     });
 
     const startGame = () => {
@@ -157,15 +193,15 @@ const Pong: React.FC = () => {
 
     const getCellClass = (r: number, c: number) => {
         // Ball
-        if (r === ball.y && c === ball.x) return 'pong-cell pong-ball';
+        if (r === ball.y && c === ball.x) return 'game-cell cell-red pulse-animation';
 
         // Top Paddle (User) - Row 0
-        if (r === 0 && c >= paddleTop - 1 && c <= paddleTop + 1) return 'pong-cell pong-paddle-user';
+        if (r === 0 && c >= paddleTop - 1 && c <= paddleTop + 1) return 'game-cell cell-green';
 
         // Bottom Paddle (CPU) - Row 5
-        if (r === ROWS - 1 && c >= paddleBottom - 1 && c <= paddleBottom + 1) return 'pong-cell pong-paddle-cpu';
+        if (r === ROWS - 1 && c >= paddleBottom - 1 && c <= paddleBottom + 1) return 'game-cell cell-red';
 
-        return 'pong-cell';
+        return 'game-cell';
     };
 
     return (
@@ -174,7 +210,20 @@ const Pong: React.FC = () => {
                 <IonToolbar>
                     <IonTitle>Pong</IonTitle>
                     <IonButtons slot="end">
-                        <IonButton onClick={() => setIsSyncing(!isSyncing)} color={isSyncing ? 'success' : 'medium'}>
+                        <IonButton onClick={() => {
+                            const newSync = !isSyncing;
+                            setIsSyncing(newSync);
+                            if (!newSync && socketRef.current) {
+                                socketRef.current.emit('pong:frame', {
+                                    ball,
+                                    paddleTop,
+                                    paddleBottom,
+                                    score,
+                                    isPlaying: false,
+                                    gameOver: false
+                                });
+                            }
+                        }} color={isSyncing ? 'success' : 'medium'}>
                             <IonIcon slot="icon-only" icon={cloudUploadOutline} />
                         </IonButton>
                         <IonButton onClick={startGame}>
@@ -183,20 +232,14 @@ const Pong: React.FC = () => {
                     </IonButtons>
                 </IonToolbar>
             </IonHeader>
-            <IonContent className="ion-padding pong-content">
+            <IonContent className="ion-padding game-page-content">
                 <div className="game-container">
                     <div className="score-board">
                         <span>User: {score.user}</span>
                         <span>CPU: {score.cpu}</span>
                     </div>
 
-                    <div className="game-grid" style={{
-                        display: 'grid',
-                        gridTemplateColumns: `repeat(${COLS}, 1fr)`,
-                        gap: '2px',
-                        maxWidth: '600px', // Limit width for 17 cols
-                        margin: '0 auto'
-                    }}>
+                    <div className="game-grid pong-grid">
                         {Array.from({ length: ROWS }).map((_, r) => (
                             Array.from({ length: COLS }).map((_, c) => (
                                 <div key={`${r}-${c}`} className={getCellClass(r, c)} />
@@ -205,7 +248,7 @@ const Pong: React.FC = () => {
                     </div>
 
                     {!isPlaying && !gameOver && (
-                        <div className="game-over-overlay" onClick={() => setIsPlaying(true)}>
+                        <div className="game-overlay" onClick={() => setIsPlaying(true)}>
                             <h2>Press Arrow Keys to Start</h2>
                             <IonButton onClick={() => setIsPlaying(true)}>Start Game</IonButton>
                         </div>
