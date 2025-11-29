@@ -1,3 +1,14 @@
+function applyWeatherColor(condition) {
+    switch (condition) {
+        case 'CLEAR': return { r: 135, g: 206, b: 235 };
+        case 'CLOUDS': return { r: 200, g: 200, b: 200 };
+        case 'RAIN': return { r: 0, g: 0, b: 255 };
+        case 'STORM': return { r: 75, g: 0, b: 130 };
+        case 'SNOW': return { r: 128, g: 128, b: 128 };
+        default: return { r: 50, g: 50, b: 50 };
+    }
+}
+
 function render(state, pos, tick, currentColor, utils) {
     if (!pos || !state?.widgets) return currentColor;
     let { r, g, b } = currentColor; // Start with the background color
@@ -6,6 +17,7 @@ function render(state, pos, tick, currentColor, utils) {
 
     // Day Bar
     const dayBar = state.widgets.dayBar;
+    // console.log('dayBar ' + JSON.stringify(dayBar));
     if (dayBar?.enabled && pos.group?.includes('Function')) {
         const fIndex = (keyId >= 2 && keyId <= 13) ? keyId - 2 : -1;
         if (fIndex >= 0) {
@@ -47,6 +59,28 @@ function render(state, pos, tick, currentColor, utils) {
         const mixed = mix(start, end, t);
         r = mixed.r; g = mixed.g; b = mixed.b;
     }
+
+    // Weather
+    if (state.weatherEnabled){
+        // 1. Weather Overrides
+        const weatherCond = (state.weather || 'CLEAR').toUpperCase();
+        const isStorming = state.stormOverride && (weatherCond === 'RAIN' || weatherCond === 'STORM');
+
+        if (isStorming) {
+            const noise = Math.sin(pos.col * 0.5 + tick * 0.1);
+            if (noise > 0.85) return { r: 0, g: 0, b: 255 };
+            if (weatherCond === 'STORM' && Math.random() > 0.995) return { r: 255, g: 255, b: 255 };
+            return { r: 0, g: 0, b: 0 };
+        }
+
+        // 2. Weather Keys        
+        const isWeatherKey = Array.isArray(state.weatherKeys) && state.weatherKeys.includes(keyId);
+
+        if (isWeatherKey) {
+            return applyWeatherColor(weatherCond);
+        }        
+    }
+
 
     return { r, g, b };
 }

@@ -152,16 +152,7 @@ return { buildKeyMaps };
     },
     layers: {
         layer1_background: (function(){
-function applyWeatherColor(condition) {
-    switch (condition) {
-        case 'CLEAR': return { r: 135, g: 206, b: 235 };
-        case 'CLOUDS': return { r: 200, g: 200, b: 200 };
-        case 'RAIN': return { r: 0, g: 0, b: 255 };
-        case 'STORM': return { r: 75, g: 0, b: 130 };
-        case 'SNOW': return { r: 128, g: 128, b: 128 };
-        default: return { r: 50, g: 50, b: 50 };
-    }
-}
+
 
 function timeToFloat(timeStr) {
     if (!timeStr) return 0;
@@ -175,23 +166,7 @@ function render(state, pos, tick, currentColor, utils) {
     const { keyId } = pos;
     const { hexToRgb, hsvToRgb } = utils;
 
-    // 1. Weather Overrides
-    const weatherCond = (state.weather || 'CLEAR').toUpperCase();
-    const isStorming = state.stormOverride && (weatherCond === 'RAIN' || weatherCond === 'STORM');
-    const isWeatherKey = Array.isArray(state.weatherKeys) && state.weatherKeys.includes(keyId);
-
-    if (isStorming) {
-        const noise = Math.sin(pos.col * 0.5 + tick * 0.1);
-        if (noise > 0.85) return { r: 0, g: 0, b: 255 };
-        if (weatherCond === 'STORM' && Math.random() > 0.995) return { r: 255, g: 255, b: 255 };
-        return { r: 0, g: 0, b: 0 };
-    }
-
-    if (isWeatherKey) {
-        return applyWeatherColor(weatherCond);
-    }
-
-    // 2. Background Logic
+    // Background Logic
     let bgMode = (state.backgroundMode || 'NONE').toUpperCase();
     // Backwards compatibility for old 'TIME' mode
     if (bgMode === 'TIME') bgMode = 'EFFECT';
@@ -397,6 +372,17 @@ return function render(_state, _pos, _tick, currentColor) {
 
 })(),
         layer3_widgets: (function(){
+function applyWeatherColor(condition) {
+    switch (condition) {
+        case 'CLEAR': return { r: 135, g: 206, b: 235 };
+        case 'CLOUDS': return { r: 200, g: 200, b: 200 };
+        case 'RAIN': return { r: 0, g: 0, b: 255 };
+        case 'STORM': return { r: 75, g: 0, b: 130 };
+        case 'SNOW': return { r: 128, g: 128, b: 128 };
+        default: return { r: 50, g: 50, b: 50 };
+    }
+}
+
 function render(state, pos, tick, currentColor, utils) {
     if (!pos || !state?.widgets) return currentColor;
     let { r, g, b } = currentColor; // Start with the background color
@@ -405,6 +391,7 @@ function render(state, pos, tick, currentColor, utils) {
 
     // Day Bar
     const dayBar = state.widgets.dayBar;
+    // console.log('dayBar ' + JSON.stringify(dayBar));
     if (dayBar?.enabled && pos.group?.includes('Function')) {
         const fIndex = (keyId >= 2 && keyId <= 13) ? keyId - 2 : -1;
         if (fIndex >= 0) {
@@ -446,6 +433,28 @@ function render(state, pos, tick, currentColor, utils) {
         const mixed = mix(start, end, t);
         r = mixed.r; g = mixed.g; b = mixed.b;
     }
+
+    // Weather
+    if (state.weatherEnabled){
+        // 1. Weather Overrides
+        const weatherCond = (state.weather || 'CLEAR').toUpperCase();
+        const isStorming = state.stormOverride && (weatherCond === 'RAIN' || weatherCond === 'STORM');
+
+        if (isStorming) {
+            const noise = Math.sin(pos.col * 0.5 + tick * 0.1);
+            if (noise > 0.85) return { r: 0, g: 0, b: 255 };
+            if (weatherCond === 'STORM' && Math.random() > 0.995) return { r: 255, g: 255, b: 255 };
+            return { r: 0, g: 0, b: 0 };
+        }
+
+        // 2. Weather Keys        
+        const isWeatherKey = Array.isArray(state.weatherKeys) && state.weatherKeys.includes(keyId);
+
+        if (isWeatherKey) {
+            return applyWeatherColor(weatherCond);
+        }        
+    }
+
 
     return { r, g, b };
 }
@@ -596,7 +605,7 @@ function render(state, pos, tick, currentColor, utils) {
 
     // Only process if this specific key has an active effect
     if (activeFades?.has(keyId)) {
-        
+        let now = Date.now();
         // --- CONFIG ---
         const typingFx = state.widgets?.typingFx || {};
         const style = typingFx.effectStyle || 'Bounce';
@@ -688,6 +697,7 @@ function render(state, pos, tick, currentColor, utils) {
                 activeFades.set(keyId, intensity);
             }
         }
+        console.log(`[Layer 5] Key: ${keyId} | Compute Time: ${Date.now() - now}ms`);
     }
 
     return { r, g, b };
@@ -695,6 +705,74 @@ function render(state, pos, tick, currentColor, utils) {
 
 return render;
 
+})(),
+        layer6_particles: (function(){
+function render(state, pos, tick, currentColor, utils) {
+    if (!pos || !state) return currentColor || { r: 0, g: 0, b: 0 };
+    let { r, g, b } = currentColor || { r: 0, g: 0, b: 0 };
+
+    const runtime = state.__fxRuntime;
+    const particles = runtime?.particles;
+
+    if (particles && particles.length > 0) {
+        const { hexToRgb } = utils;
+        // We read intensity from config just to calculate spread distance dynamically
+        const config = state.widgets?.typingFx || {};
+        const baseIntensity = (config.intensity !== undefined) ? config.intensity : 0.5;
+
+        // Calculate Beam Spread based on intensity slider
+        // Low Intensity = Short Beam (2 units)
+        // High Intensity = Long Beam (10 units)
+        const maxDistance = 2 + (baseIntensity * 8);
+
+        for (let i = 0; i < particles.length; i++) {
+            const p = particles[i];
+            
+            // Calculate Lifecycle Opacity (Fade out as it ages)
+            const lifePct = 1.0 - (p.age / p.maxAge);
+            if (lifePct <= 0) continue;
+
+            // --- LASER LOGIC ---
+            if (p.type === 'LASER') {
+                let dist = -1;
+
+                // Horizontal Check (Exact Row Match)
+                if (pos.row === p.row) {
+                    dist = Math.abs(pos.col - p.col);
+                } 
+                // Vertical Check (Fuzzy column match for staggered layout)
+                // We allow a 0.5 unit tolerance for vertical alignment
+                else if (Math.abs(pos.col - p.col) < 0.5) {
+                    dist = Math.abs(pos.row - p.row);
+                }
+
+                // Render if hit
+                if (dist >= 0 && dist < maxDistance) {
+                    // Distance Falloff (Bright center, dim edges)
+                    // Power of 2 curve makes the center "hotter"
+                    const distFalloff = Math.pow(1.0 - (dist / maxDistance), 2);
+                    
+                    // Combine Life * Distance
+                    const brightness = lifePct * distFalloff;
+
+                    if (brightness > 0) {
+                        // Use pre-calculated RGB if available, else parse
+                        const pColor = p.rgb || hexToRgb(p.hexColor || '#FFFFFF');
+                        
+                        // Additive Blending (Clamped to 255)
+                        r = Math.min(255, r + (pColor.r * brightness));
+                        g = Math.min(255, g + (pColor.g * brightness));
+                        b = Math.min(255, b + (pColor.b * brightness));
+                    }
+                }
+            }
+        }
+    }
+
+    return { r, g, b };
+}
+
+return render;
 })(),
         layer_breakout: (function(){
 // layer_breakout.js
@@ -1290,6 +1368,8 @@ registerAction(({
             },
             // --- UPDATED FLASH LOGIC ---
             flashKey: (keyName) => {
+                console.log(`[GodMode] Flashing Key: ${keyName}`);
+                const tick = Date.now();
                 const id = NAME_TO_ID.get(keyName.toUpperCase());
                 if (!id) return; // Key not found
 
@@ -1326,6 +1406,9 @@ registerAction(({
                 else {
                     fades.set(id, 1.0);
                 }
+
+                const timeDifferenceMs = Date.now() - tick;
+                console.log(`[GodMode] Time Difference: ${timeDifferenceMs}ms`);
             }
         };
     }

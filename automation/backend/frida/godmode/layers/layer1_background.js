@@ -1,13 +1,4 @@
-function applyWeatherColor(condition) {
-    switch (condition) {
-        case 'CLEAR': return { r: 135, g: 206, b: 235 };
-        case 'CLOUDS': return { r: 200, g: 200, b: 200 };
-        case 'RAIN': return { r: 0, g: 0, b: 255 };
-        case 'STORM': return { r: 75, g: 0, b: 130 };
-        case 'SNOW': return { r: 128, g: 128, b: 128 };
-        default: return { r: 50, g: 50, b: 50 };
-    }
-}
+
 
 function timeToFloat(timeStr) {
     if (!timeStr) return 0;
@@ -21,23 +12,7 @@ function render(state, pos, tick, currentColor, utils) {
     const { keyId } = pos;
     const { hexToRgb, hsvToRgb } = utils;
 
-    // 1. Weather Overrides
-    const weatherCond = (state.weather || 'CLEAR').toUpperCase();
-    const isStorming = state.stormOverride && (weatherCond === 'RAIN' || weatherCond === 'STORM');
-    const isWeatherKey = Array.isArray(state.weatherKeys) && state.weatherKeys.includes(keyId);
-
-    if (isStorming) {
-        const noise = Math.sin(pos.col * 0.5 + tick * 0.1);
-        if (noise > 0.85) return { r: 0, g: 0, b: 255 };
-        if (weatherCond === 'STORM' && Math.random() > 0.995) return { r: 255, g: 255, b: 255 };
-        return { r: 0, g: 0, b: 0 };
-    }
-
-    if (isWeatherKey) {
-        return applyWeatherColor(weatherCond);
-    }
-
-    // 2. Background Logic
+    // Background Logic
     let bgMode = (state.backgroundMode || 'NONE').toUpperCase();
     // Backwards compatibility for old 'TIME' mode
     if (bgMode === 'TIME') bgMode = 'EFFECT';

@@ -188,6 +188,8 @@
             },
             // --- UPDATED FLASH LOGIC ---
             flashKey: (keyName) => {
+                console.log(`[GodMode] Flashing Key: ${keyName}`);
+                const tick = Date.now();
                 const id = NAME_TO_ID.get(keyName.toUpperCase());
                 if (!id) return; // Key not found
 
@@ -224,6 +226,9 @@
                 else {
                     fades.set(id, 1.0);
                 }
+
+                const timeDifferenceMs = Date.now() - tick;
+                console.log(`[GodMode] Time Difference: ${timeDifferenceMs}ms`);
             }
         };
     }

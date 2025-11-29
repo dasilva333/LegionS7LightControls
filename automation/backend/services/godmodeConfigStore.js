@@ -93,10 +93,10 @@ async function getGodModeState() {
   const widgetConfigs = await getWidgetConfigs();
 
   // Merge Day Bar
-  if (widgetConfigs.day_bar) {
+  if (widgetConfigs.dayBar) {
     baseState.widgets.dayBar = {
       ...baseState.widgets.dayBar,
-      ...widgetConfigs.day_bar
+      ...widgetConfigs.dayBar
     };
   }
 

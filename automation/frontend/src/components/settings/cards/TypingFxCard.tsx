@@ -95,6 +95,7 @@ const TypingFxCard: React.FC<TypingFxCardProps> = ({ disabled }) => {
           onIonChange={(event) => persist({ effectStyle: event.detail.value })}
           disabled={controlsDisabled}
         >
+          <IonSelectOption value="Laser">Laser</IonSelectOption>
           <IonSelectOption value="Heatmap">Heatmap</IonSelectOption>
           <IonSelectOption value="Bounce">Bounce</IonSelectOption>
           <IonSelectOption value="Flash">Flash</IonSelectOption>

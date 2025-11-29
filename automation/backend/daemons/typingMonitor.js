@@ -4,7 +4,7 @@ const { getGodModeState } = require('../services/godmodeConfigStore');
 
 // --- KEY MAPPING ---
 const KEY_MAPPING = {
-    [UiohookKey.Escape]: 'Esc',
+    [UiohookKey.Escape]: 'Esc',[UiohookKey.Backquote]: '~ (Tilde)',
     [UiohookKey.F1]: 'F1', [UiohookKey.F2]: 'F2', [UiohookKey.F3]: 'F3', [UiohookKey.F4]: 'F4',
     [UiohookKey.F5]: 'F5', [UiohookKey.F6]: 'F6', [UiohookKey.F7]: 'F7', [UiohookKey.F8]: 'F8',
     [UiohookKey.F9]: 'F9', [UiohookKey.F10]: 'F10', [UiohookKey.F11]: 'F11', [UiohookKey.F12]: 'F12',

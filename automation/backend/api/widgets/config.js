@@ -1,6 +1,6 @@
 const express = require('express');
 const { getWidgetConfig, upsertWidgetConfig } = require('../../services/widgetConfigStore');
-const { getGodModeState } = require('../../services/godmodeConfigStore');
+const { getGodModeState, mergeGodModeState } = require('../../services/godmodeConfigStore');
 const { sendCommand } = require('../../frida/proxy');
 
 const router = express.Router();
@@ -22,6 +22,7 @@ router.post('/api/widgets/:id', async (req, res) => {
 
     // Sync with Frida immediately
     const hydratedState = await getGodModeState();
+    mergeGodModeState({ ...hydratedState });
     await sendCommand('updateState', hydratedState);
 
     res.json({ widgetId: req.params.id, config: saved });

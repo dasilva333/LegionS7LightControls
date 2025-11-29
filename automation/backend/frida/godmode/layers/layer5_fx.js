@@ -119,7 +119,7 @@ function render(state, pos, tick, currentColor, utils) {
 
     // Only process if this specific key has an active effect
     if (activeFades?.has(keyId)) {
-        
+        let now = Date.now();
         // --- CONFIG ---
         const typingFx = state.widgets?.typingFx || {};
         const style = typingFx.effectStyle || 'Bounce';
@@ -211,6 +211,7 @@ function render(state, pos, tick, currentColor, utils) {
                 activeFades.set(keyId, intensity);
             }
         }
+        console.log(`[Layer 5] Key: ${keyId} | Compute Time: ${Date.now() - now}ms`);
     }
 
     return { r, g, b };
