@@ -6,3 +6,7 @@ node_modules
 /ghidra_11.4.2_PUBLIC_20250826
 /automation/backend/.env
 /videos/*.mov
+/Ghidra/ghidra_11.4.2_PUBLIC_20250826/ghidra_11.4.2_PUBLIC
+/Ghidra/GhidraMCP-release-1-4
+**/obj/**
+**/Debug/**

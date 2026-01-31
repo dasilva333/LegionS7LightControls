@@ -68,7 +68,7 @@ function sendCommand(command, payload) {
         setTimeout(() => {
             if (pendingRequests.has(taskId)) {
                 pendingRequests.delete(taskId);
-                reject(new Error(`Timeout: No response from worker for command '${command}' after 15 seconds.`));
+                //reject(new Error(`Timeout: No response from worker for command '${command}' after 15 seconds.`));
             }
         }, 15000);
     });

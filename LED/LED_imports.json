@@ -1,0 +1,674 @@
+{
+  "Imports": [
+    {
+      "Flags": 0,
+      "Name": "KERNEL32.dll",
+      "NumberOfEntries": 75,
+      "ImportList": [
+        {
+          "Hint": 1447,
+          "Ordinal": 1447,
+          "Name": "Sleep",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 299,
+          "Ordinal": 299,
+          "Name": "DeviceIoControl",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 628,
+          "Ordinal": 628,
+          "Name": "GetLastError",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 142,
+          "Ordinal": 142,
+          "Name": "CloseHandle",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 211,
+          "Ordinal": 211,
+          "Name": "CreateFileW",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 546,
+          "Ordinal": 546,
+          "Name": "GetCurrentDirectoryA",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1596,
+          "Ordinal": 1596,
+          "Name": "WriteConsoleW",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1257,
+          "Ordinal": 1257,
+          "Name": "RtlCaptureContext",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1265,
+          "Ordinal": 1265,
+          "Name": "RtlLookupFunctionEntry",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1272,
+          "Ordinal": 1272,
+          "Name": "RtlVirtualUnwind",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1496,
+          "Ordinal": 1496,
+          "Name": "UnhandledExceptionFilter",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1431,
+          "Ordinal": 1431,
+          "Name": "SetUnhandledExceptionFilter",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 554,
+          "Ordinal": 554,
+          "Name": "GetCurrentProcess",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1462,
+          "Ordinal": 1462,
+          "Name": "TerminateProcess",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 926,
+          "Ordinal": 926,
+          "Name": "IsProcessorFeaturePresent",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1124,
+          "Ordinal": 1124,
+          "Name": "QueryPerformanceCounter",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 555,
+          "Ordinal": 555,
+          "Name": "GetCurrentProcessId",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 559,
+          "Ordinal": 559,
+          "Name": "GetCurrentThreadId",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 769,
+          "Ordinal": 769,
+          "Name": "GetSystemTimeAsFileTime",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 897,
+          "Ordinal": 897,
+          "Name": "InitializeSListHead",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 919,
+          "Ordinal": 919,
+          "Name": "IsDebuggerPresent",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 744,
+          "Ordinal": 744,
+          "Name": "GetStartupInfoW",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 652,
+          "Ordinal": 652,
+          "Name": "GetModuleHandleW",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1271,
+          "Ordinal": 1271,
+          "Name": "RtlUnwindEx",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 901,
+          "Ordinal": 901,
+          "Name": "InterlockedFlushSList",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1367,
+          "Ordinal": 1367,
+          "Name": "SetLastError",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 321,
+          "Ordinal": 321,
+          "Name": "EnterCriticalSection",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 982,
+          "Ordinal": 982,
+          "Name": "LeaveCriticalSection",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 283,
+          "Ordinal": 283,
+          "Name": "DeleteCriticalSection",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 893,
+          "Ordinal": 893,
+          "Name": "InitializeCriticalSectionAndSpinCount",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1480,
+          "Ordinal": 1480,
+          "Name": "TlsAlloc",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1482,
+          "Ordinal": 1482,
+          "Name": "TlsGetValue",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1483,
+          "Ordinal": 1483,
+          "Name": "TlsSetValue",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1481,
+          "Ordinal": 1481,
+          "Name": "TlsFree",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 445,
+          "Ordinal": 445,
+          "Name": "FreeLibrary",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 708,
+          "Ordinal": 708,
+          "Name": "GetProcAddress",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 988,
+          "Ordinal": 988,
+          "Name": "LoadLibraryExW",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 317,
+          "Ordinal": 317,
+          "Name": "EncodePointer",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1147,
+          "Ordinal": 1147,
+          "Name": "RaiseException",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1267,
+          "Ordinal": 1267,
+          "Name": "RtlPcToFileHeader",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 368,
+          "Ordinal": 368,
+          "Name": "ExitProcess",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 651,
+          "Ordinal": 651,
+          "Name": "GetModuleHandleExW",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 648,
+          "Ordinal": 648,
+          "Name": "GetModuleFileNameW",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 867,
+          "Ordinal": 867,
+          "Name": "HeapAlloc",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 871,
+          "Ordinal": 871,
+          "Name": "HeapFree",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 391,
+          "Ordinal": 391,
+          "Name": "FindClose",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 397,
+          "Ordinal": 397,
+          "Name": "FindFirstFileExW",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 414,
+          "Ordinal": 414,
+          "Name": "FindNextFileW",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 932,
+          "Ordinal": 932,
+          "Name": "IsValidCodePage",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 452,
+          "Ordinal": 452,
+          "Name": "GetACP",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 685,
+          "Ordinal": 685,
+          "Name": "GetOEMCP",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 467,
+          "Ordinal": 467,
+          "Name": "GetCPInfo",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 488,
+          "Ordinal": 488,
+          "Name": "GetCommandLineA",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 489,
+          "Ordinal": 489,
+          "Name": "GetCommandLineW",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1032,
+          "Ordinal": 1032,
+          "Name": "MultiByteToWideChar",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1577,
+          "Ordinal": 1577,
+          "Name": "WideCharToMultiByte",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 587,
+          "Ordinal": 587,
+          "Name": "GetEnvironmentStringsW",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 444,
+          "Ordinal": 444,
+          "Name": "FreeEnvironmentStringsW",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 428,
+          "Ordinal": 428,
+          "Name": "FlsAlloc",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 430,
+          "Ordinal": 430,
+          "Name": "FlsGetValue",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 431,
+          "Ordinal": 431,
+          "Name": "FlsSetValue",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 429,
+          "Ordinal": 429,
+          "Name": "FlsFree",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 970,
+          "Ordinal": 970,
+          "Name": "LCMapStringW",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 715,
+          "Ordinal": 715,
+          "Name": "GetProcessHeap",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 746,
+          "Ordinal": 746,
+          "Name": "GetStdHandle",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 610,
+          "Ordinal": 610,
+          "Name": "GetFileType",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 751,
+          "Ordinal": 751,
+          "Name": "GetStringTypeW",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 876,
+          "Ordinal": 876,
+          "Name": "HeapSize",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 874,
+          "Ordinal": 874,
+          "Name": "HeapReAlloc",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1394,
+          "Ordinal": 1394,
+          "Name": "SetStdHandle",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 433,
+          "Ordinal": 433,
+          "Name": "FlushFileBuffers",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1597,
+          "Ordinal": 1597,
+          "Name": "WriteFile",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 530,
+          "Ordinal": 530,
+          "Name": "GetConsoleOutputCP",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 526,
+          "Ordinal": 526,
+          "Name": "GetConsoleMode",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 1353,
+          "Ordinal": 1353,
+          "Name": "SetFilePointerEx",
+          "ModuleName": "KERNEL32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        }
+      ]
+    },
+    {
+      "Flags": 0,
+      "Name": "ADVAPI32.dll",
+      "NumberOfEntries": 7,
+      "ImportList": [
+        {
+          "Hint": 776,
+          "Ordinal": 776,
+          "Name": "StartServiceW",
+          "ModuleName": "ADVAPI32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 550,
+          "Ordinal": 550,
+          "Name": "OpenServiceW",
+          "ModuleName": "ADVAPI32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 548,
+          "Ordinal": 548,
+          "Name": "OpenSCManagerW",
+          "ModuleName": "ADVAPI32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 236,
+          "Ordinal": 236,
+          "Name": "DeleteService",
+          "ModuleName": "ADVAPI32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 145,
+          "Ordinal": 145,
+          "Name": "CreateServiceW",
+          "ModuleName": "ADVAPI32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 106,
+          "Ordinal": 106,
+          "Name": "ControlService",
+          "ModuleName": "ADVAPI32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        },
+        {
+          "Hint": 101,
+          "Ordinal": 101,
+          "Name": "CloseServiceHandle",
+          "ModuleName": "ADVAPI32.dll",
+          "ImportByOrdinal": false,
+          "DelayImport": false
+        }
+      ]
+    }
+  ]
+}

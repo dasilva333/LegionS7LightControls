@@ -1,0 +1,81 @@
+{
+  "Exports": [
+    {
+      "Ordinal": 1,
+      "Name": "DeleteDevice",
+      "ExportByOrdinal": false,
+      "VirtualAddress": 4096,
+      "ForwardedName": ""
+    },
+    {
+      "Ordinal": 2,
+      "Name": "GetLedLight",
+      "ExportByOrdinal": false,
+      "VirtualAddress": 4112,
+      "ForwardedName": ""
+    },
+    {
+      "Ordinal": 3,
+      "Name": "LedClose",
+      "ExportByOrdinal": false,
+      "VirtualAddress": 4688,
+      "ForwardedName": ""
+    },
+    {
+      "Ordinal": 4,
+      "Name": "LedColor",
+      "ExportByOrdinal": false,
+      "VirtualAddress": 4800,
+      "ForwardedName": ""
+    },
+    {
+      "Ordinal": 5,
+      "Name": "LedCreate",
+      "ExportByOrdinal": false,
+      "VirtualAddress": 5936,
+      "ForwardedName": ""
+    },
+    {
+      "Ordinal": 6,
+      "Name": "LedHandleClose",
+      "ExportByOrdinal": false,
+      "VirtualAddress": 6432,
+      "ForwardedName": ""
+    },
+    {
+      "Ordinal": 7,
+      "Name": "LedLight",
+      "ExportByOrdinal": false,
+      "VirtualAddress": 6448,
+      "ForwardedName": ""
+    },
+    {
+      "Ordinal": 8,
+      "Name": "LedLighting",
+      "ExportByOrdinal": false,
+      "VirtualAddress": 7248,
+      "ForwardedName": ""
+    },
+    {
+      "Ordinal": 9,
+      "Name": "?LedMix@@YAHPEAXH@Z",
+      "ExportByOrdinal": false,
+      "VirtualAddress": 7664,
+      "ForwardedName": ""
+    },
+    {
+      "Ordinal": 10,
+      "Name": "LedSetFrequency",
+      "ExportByOrdinal": false,
+      "VirtualAddress": 7696,
+      "ForwardedName": ""
+    },
+    {
+      "Ordinal": 11,
+      "Name": "LedWave",
+      "ExportByOrdinal": false,
+      "VirtualAddress": 7904,
+      "ForwardedName": ""
+    }
+  ]
+}

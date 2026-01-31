@@ -697,7 +697,7 @@ function render(state, pos, tick, currentColor, utils) {
                 activeFades.set(keyId, intensity);
             }
         }
-        // console.log(`[Layer 5] Key: ${keyId} | Compute Time: ${Date.now() - now}ms`);
+        console.log(`[Layer 5] Key: ${keyId} | Compute Time: ${Date.now() - now}ms`);
     }
 
     return { r, g, b };
