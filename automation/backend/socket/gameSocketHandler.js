@@ -84,6 +84,14 @@ function initGameSocket(io) {
             sendCommand('updateState', { pong: pongGameState });
         });
 
+        // --- TYPING FX EVENTS (from helper) ---
+        socket.on('typing:key', (keyName) => {
+            if (!keyName) return;
+            messageCount++;
+            // Forward to God Mode runtime
+            sendCommand('flashKey', keyName).catch(() => {});
+        });
+
         socket.on('disconnect', () => {
             console.log('\n[GameHandler] Frontend disconnected:', socket.id);
         });

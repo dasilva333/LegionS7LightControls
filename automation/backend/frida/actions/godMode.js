@@ -196,6 +196,8 @@
                 const fades = state.__fxRuntime.activeFades;
                 const config = state.widgets?.typingFx || {};
                 const style = config.effectStyle || 'Bounce';
+                const pos = KEY_MAP.get(id);
+                const baseMeta = pos ? { row: pos.row, col: pos.col } : {};
 
                 // 1. Heatmap: Accumulate Intensity
                 if (style === 'Heatmap') {
@@ -214,21 +216,21 @@
                     let nextVal = currentVal + increment;
                     if (nextVal > 1.0) nextVal = 1.0; // Cap at max
 
-                    fades.set(id, nextVal);
+                    fades.set(id, { intensity: nextVal, ...baseMeta });
                 }
                 // 2. Rainbow: Trigger Random Color
                 else if (style === 'Rainbow Sparkle') {
                     // We set hue to undefined. The renderer (Layer 5) will see this
                     // and generate a random hue on the next frame.
-                    fades.set(id, { intensity: 1.0, hue: undefined });
+                    fades.set(id, { intensity: 1.0, hue: undefined, ...baseMeta });
                 }
-                // 3. Bounce / Flash: Reset to Max
+                // 3. Bounce / Flash / Laser: Reset to Max
                 else {
-                    fades.set(id, 1.0);
+                    fades.set(id, { intensity: 1.0, ...baseMeta });
                 }
 
-                const timeDifferenceMs = Date.now() - tick;
-                console.log(`[GodMode] Time Difference: ${timeDifferenceMs}ms`);
+                // const timeDifferenceMs = Date.now() - tick;
+                // console.log(`[GodMode] Time Difference: ${timeDifferenceMs}ms`);
             }
         };
     }

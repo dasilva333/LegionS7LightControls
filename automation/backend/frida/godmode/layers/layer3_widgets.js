@@ -51,13 +51,43 @@ function render(state, pos, tick, currentColor, utils) {
     const tempWidget = state.widgets.temperature;
     if (tempWidget?.enabled && Array.isArray(tempWidget.keys) && tempWidget.keys.some(k => k == keyId)) {
         const { value = 0, low = 0, high = 100, lowColor, highColor } = tempWidget;
-        let t = (value - low) / (high - low || 1);
-        if (t < 0) t = 0; if (t > 1) t = 1;
-        
-        const start = hexToRgb(lowColor || '#0000FF');
-        const end = hexToRgb(highColor || '#FF0000');
-        const mixed = mix(start, end, t);
-        r = mixed.r; g = mixed.g; b = mixed.b;
+        const ranges = Array.isArray(tempWidget.ranges) ? tempWidget.ranges : [];
+
+        if (ranges.length > 0) {
+            let bestRange = null;
+            let bestDistance = Infinity;
+
+            ranges.forEach((range) => {
+                const min = typeof range.min === 'number' ? range.min : null;
+                const max = typeof range.max === 'number' ? range.max : null;
+                let distance = 0;
+
+                if (min !== null && value < min) {
+                    distance = min - value;
+                } else if (max !== null && value > max) {
+                    distance = value - max;
+                } else {
+                    distance = 0;
+                }
+
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    bestRange = range;
+                }
+            });
+
+            const rangeColor = (bestRange && (bestRange.color || bestRange.hex)) || '#0000FF';
+            const selected = hexToRgb(rangeColor);
+            r = selected.r; g = selected.g; b = selected.b;
+        } else {
+            let t = (value - low) / (high - low || 1);
+            if (t < 0) t = 0; if (t > 1) t = 1;
+
+            const start = hexToRgb(lowColor || '#0000FF');
+            const end = hexToRgb(highColor || '#FF0000');
+            const mixed = mix(start, end, t);
+            r = mixed.r; g = mixed.g; b = mixed.b;
+        }
     }
 
     // Weather

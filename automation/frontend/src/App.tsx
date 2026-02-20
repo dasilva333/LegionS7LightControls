@@ -10,7 +10,7 @@ import {
   IonTabs,
   setupIonicReact
 } from '@ionic/react';
-import { IonReactRouter } from '@ionic/react-router';
+import { IonReactHashRouter } from '@ionic/react-router';
 import { homeOutline, settingsOutline, terminalOutline, gameControllerOutline, gridOutline } from 'ionicons/icons';
 import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
@@ -43,7 +43,7 @@ setupIonicReact();
 
 const App: React.FC = () => (
   <IonApp>
-    <IonReactRouter>
+    <IonReactHashRouter>
       <IonTabs>
         <IonRouterOutlet>
           <Route exact path="/dashboard">
@@ -90,7 +90,7 @@ const App: React.FC = () => (
           </IonTabButton>
         </IonTabBar>
       </IonTabs>
-    </IonReactRouter>
+    </IonReactHashRouter>
   </IonApp>
 );
 

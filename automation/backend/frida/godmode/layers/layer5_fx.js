@@ -114,18 +114,57 @@ function render(state, pos, tick, currentColor, utils) {
     }
 
     // --- 2. Typing FX ---
-     const runtime = state.__fxRuntime;
+    const runtime = state.__fxRuntime;
     const activeFades = runtime?.activeFades;
 
-    // Only process if this specific key has an active effect
-    if (activeFades?.has(keyId)) {
+    // --- CONFIG ---
+    const typingFx = state.widgets?.typingFx || {};
+    const style = typingFx.effectStyle || 'Bounce';
+    const hexColor = typingFx.effectColor || '#FFAF00';
+    // baseDecay comes from the UI slider (usually 0.1)
+    const baseDecay = (typingFx.intensity !== undefined) ? typingFx.intensity : 0.1;
+
+    // --- LASER MODE (cross-beam) ---
+    if (style === 'Laser' && activeFades && activeFades.size > 0) {
+        const { r: baseR, g: baseG, b: baseB } = hexToRgb(hexColor);
+        const maxDist = Math.max(1, Math.round(1 + (baseDecay * 20))); // 20 columns wide
+
+        // Decay once per tick
+        if (runtime.__lastLaserDecayTick !== tick) {
+            runtime.__lastLaserDecayTick = tick;
+            for (const [id, entry] of activeFades.entries()) {
+                const intensity = (typeof entry === 'number') ? entry : entry.intensity;
+                let nextVal = intensity - baseDecay;
+                if (nextVal <= 0) activeFades.delete(id);
+                else if (typeof entry === 'object') activeFades.set(id, { ...entry, intensity: nextVal });
+                else activeFades.set(id, nextVal);
+            }
+        }
+
+        for (const entry of activeFades.values()) {
+            const intensity = (typeof entry === 'number') ? entry : entry.intensity;
+            const originRow = entry?.row;
+            const originCol = entry?.col;
+            if (originRow === undefined || originCol === undefined) continue;
+
+            let dist = -1;
+            if (pos.row === originRow) dist = Math.abs(pos.col - originCol);
+            else if (pos.col === originCol) dist = Math.abs(pos.row - originRow);
+
+            if (dist >= 0 && dist <= maxDist) {
+                const falloff = Math.pow(1.0 - (dist / maxDist), 2);
+                const brightness = intensity * falloff;
+                // Override blend for Laser (ignore background)
+                r = Math.min(255, baseR * brightness);
+                g = Math.min(255, baseG * brightness);
+                b = Math.min(255, baseB * brightness);
+            }
+        }
+    }
+
+    // --- STANDARD MODES ---
+    if (style !== 'Laser' && activeFades?.has(keyId)) {
         let now = Date.now();
-        // --- CONFIG ---
-        const typingFx = state.widgets?.typingFx || {};
-        const style = typingFx.effectStyle || 'Bounce';
-        const hexColor = typingFx.effectColor || '#FFAF00';
-        // baseDecay comes from the UI slider (usually 0.1)
-        const baseDecay = typingFx.intensity || 0.1;
 
         // --- RETRIEVE KEY STATE ---
         let entry = activeFades.get(keyId);
@@ -202,13 +241,13 @@ function render(state, pos, tick, currentColor, utils) {
         } else {
             // Save back to state
             if (style === 'Rainbow Sparkle') {
-                activeFades.set(keyId, { intensity, hue: meta.hue });
+                activeFades.set(keyId, { intensity, hue: meta.hue, row: meta.row, col: meta.col });
             } else if (style === 'Heatmap') {
                 // Heatmap also uses object storage in case we want to add metadata later
-                activeFades.set(keyId, { intensity });
+                activeFades.set(keyId, { intensity, row: meta.row, col: meta.col });
             } else {
-                // Optimization for simple modes
-                activeFades.set(keyId, intensity);
+                // Store object so laser can re-use row/col if style changes
+                activeFades.set(keyId, { intensity, row: meta.row, col: meta.col });
             }
         }
         // console.log(`[Layer 5] Key: ${keyId} | Compute Time: ${Date.now() - now}ms`);

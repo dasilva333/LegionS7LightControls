@@ -24,6 +24,7 @@ require('./daemons/timeKeeper');
 // -------------------------
 
 const apiDir = path.join(__dirname, "api");
+const distDir = path.join(__dirname, "dist");
 
 function registerRoutes(directory) {
   fs.readdirSync(directory, { withFileTypes: true }).forEach((entry) => {
@@ -61,6 +62,12 @@ if (fs.existsSync(apiDir)) {
   registerRoutes(apiDir);
 } else {
   console.warn("API directory not found; no routes loaded");
+}
+
+if (fs.existsSync(distDir)) {
+  app.use(express.static(distDir));
+  app.get("/", (_req, res) => res.sendFile(path.join(distDir, "index.html")));
+  app.get("/app", (_req, res) => res.sendFile(path.join(distDir, "index.html")));
 }
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
